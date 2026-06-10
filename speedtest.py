@@ -38,269 +38,58 @@ except ImportError:
 
 __version__ = '2.1.4b1'
 
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
+
 
 class FakeShutdownEvent(object):
-    """Class to fake a threading.Event.isSet so that users of this module
+    """Class to fake a threading.Event.is_set so that users of this module
     are not required to register their own threading.Event()
     """
 
     @staticmethod
-    def isSet():
+    def is_set():
         "Dummy method to always return false"""
         return False
 
-    is_set = isSet
-
-
 # Some global variables we use
-DEBUG = False
+DEBUG = True
 _GLOBAL_DEFAULT_TIMEOUT = object()
-PY25PLUS = sys.version_info[:2] >= (2, 5)
-PY26PLUS = sys.version_info[:2] >= (2, 6)
-PY32PLUS = sys.version_info[:2] >= (3, 2)
-PY310PLUS = sys.version_info[:2] >= (3, 10)
 
-# Begin import game to handle Python 2 and Python 3
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        json = None
+import json
+import xml.etree.ElementTree as ET
+from urllib.request import (urlopen, Request, HTTPError, URLError,
+                            AbstractHTTPHandler, ProxyHandler,
+                            HTTPDefaultErrorHandler, HTTPRedirectHandler,
+                            HTTPErrorProcessor, OpenerDirector)
+from http.client import HTTPConnection, HTTPSConnection, BadStatusLine
+from queue import Queue
+from urllib.parse import urlparse, parse_qs
+from hashlib import md5
+from argparse import ArgumentParser as ArgParser
+from argparse import SUPPRESS as ARG_SUPPRESS
+from io import StringIO, BytesIO, TextIOWrapper, FileIO
+import builtins
 
-try:
-    import xml.etree.ElementTree as ET
-    try:
-        from xml.etree.ElementTree import _Element as ET_Element
-    except ImportError:
-        pass
-except ImportError:
-    from xml.dom import minidom as DOM
-    from xml.parsers.expat import ExpatError
-    ET = None
-
-try:
-    from urllib2 import (urlopen, Request, HTTPError, URLError,
-                         AbstractHTTPHandler, ProxyHandler,
-                         HTTPDefaultErrorHandler, HTTPRedirectHandler,
-                         HTTPErrorProcessor, OpenerDirector)
-except ImportError:
-    from urllib.request import (urlopen, Request, HTTPError, URLError,
-                                AbstractHTTPHandler, ProxyHandler,
-                                HTTPDefaultErrorHandler, HTTPRedirectHandler,
-                                HTTPErrorProcessor, OpenerDirector)
-
-try:
-    from httplib import HTTPConnection, BadStatusLine
-except ImportError:
-    from http.client import HTTPConnection, BadStatusLine
-
-try:
-    from httplib import HTTPSConnection
-except ImportError:
-    try:
-        from http.client import HTTPSConnection
-    except ImportError:
-        HTTPSConnection = None
-
-try:
-    from httplib import FakeSocket
-except ImportError:
-    FakeSocket = None
-
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
-
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
-
-try:
-    from urlparse import parse_qs
-except ImportError:
-    try:
-        from urllib.parse import parse_qs
-    except ImportError:
-        from cgi import parse_qs
-
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import md5
-
-try:
-    from argparse import ArgumentParser as ArgParser
-    from argparse import SUPPRESS as ARG_SUPPRESS
-    PARSER_TYPE_INT = int
-    PARSER_TYPE_STR = str
-    PARSER_TYPE_FLOAT = float
-except ImportError:
-    from optparse import OptionParser as ArgParser
-    from optparse import SUPPRESS_HELP as ARG_SUPPRESS
-    PARSER_TYPE_INT = 'int'
-    PARSER_TYPE_STR = 'string'
-    PARSER_TYPE_FLOAT = 'float'
-
-try:
-    from cStringIO import StringIO
-    BytesIO = None
-except ImportError:
-    try:
-        from StringIO import StringIO
-        BytesIO = None
-    except ImportError:
-        from io import StringIO, BytesIO
-
-try:
-    import __builtin__
-except ImportError:
-    import builtins
-    from io import TextIOWrapper, FileIO
-
-    class _Py3Utf8Output(TextIOWrapper):
-        """UTF-8 encoded wrapper around stdout for py3, to override
-        ASCII stdout
-        """
-        def __init__(self, f, **kwargs):
-            buf = FileIO(f.fileno(), 'w')
-            super(_Py3Utf8Output, self).__init__(
-                buf,
-                encoding='utf8',
-                errors='strict'
-            )
-
-        def write(self, s):
-            super(_Py3Utf8Output, self).write(s)
-            self.flush()
-
-    _py3_print = getattr(builtins, 'print')
-    try:
-        _py3_utf8_stdout = _Py3Utf8Output(sys.stdout)
-        _py3_utf8_stderr = _Py3Utf8Output(sys.stderr)
-    except OSError:
-        # sys.stdout/sys.stderr is not a compatible stdout/stderr object
-        # just use it and hope things go ok
-        _py3_utf8_stdout = sys.stdout
-        _py3_utf8_stderr = sys.stderr
-
-    def to_utf8(v):
-        """No-op encode to utf-8 for py3"""
-        return v
-
-    def print_(*args, **kwargs):
-        """Wrapper function for py3 to print, with a utf-8 encoded stdout"""
-        if kwargs.get('file') == sys.stderr:
-            kwargs['file'] = _py3_utf8_stderr
-        else:
-            kwargs['file'] = kwargs.get('file', _py3_utf8_stdout)
-        _py3_print(*args, **kwargs)
-else:
-    del __builtin__
-
-    def to_utf8(v):
-        """Encode value to utf-8 if possible for py2"""
-        try:
-            return v.encode('utf8', 'strict')
-        except AttributeError:
-            return v
-
-    def print_(*args, **kwargs):
-        """The new-style print function for Python 2.4 and 2.5.
-
-        Taken from https://pypi.python.org/pypi/six/
-
-        Modified to set encoding to UTF-8 always, and to flush after write
-        """
-        fp = kwargs.pop("file", sys.stdout)
-        if fp is None:
-            return
-
-        def write(data):
-            if not isinstance(data, basestring):
-                data = str(data)
-            # If the file has an encoding, encode unicode with it.
-            encoding = 'utf8'  # Always trust UTF-8 for output
-            if (isinstance(fp, file) and
-                    isinstance(data, unicode) and
-                    encoding is not None):
-                errors = getattr(fp, "errors", None)
-                if errors is None:
-                    errors = "strict"
-                data = data.encode(encoding, errors)
-            fp.write(data)
-            fp.flush()
-        want_unicode = False
-        sep = kwargs.pop("sep", None)
-        if sep is not None:
-            if isinstance(sep, unicode):
-                want_unicode = True
-            elif not isinstance(sep, str):
-                raise TypeError("sep must be None or a string")
-        end = kwargs.pop("end", None)
-        if end is not None:
-            if isinstance(end, unicode):
-                want_unicode = True
-            elif not isinstance(end, str):
-                raise TypeError("end must be None or a string")
-        if kwargs:
-            raise TypeError("invalid keyword arguments to print()")
-        if not want_unicode:
-            for arg in args:
-                if isinstance(arg, unicode):
-                    want_unicode = True
-                    break
-        if want_unicode:
-            newline = unicode("\n")
-            space = unicode(" ")
-        else:
-            newline = "\n"
-            space = " "
-        if sep is None:
-            sep = space
-        if end is None:
-            end = newline
-        for i, arg in enumerate(args):
-            if i:
-                write(sep)
-            write(arg)
-        write(end)
+def to_utf8(v):
+    """No-op encode to utf-8 for py3"""
+    return v
 
 # Exception "constants" to support Python 2 through Python 3
+import ssl
 try:
-    import ssl
-    try:
-        CERT_ERROR = (ssl.CertificateError,)
-    except AttributeError:
-        CERT_ERROR = tuple()
+    CERT_ERROR = (ssl.CertificateError,)
+except AttributeError:
+    CERT_ERROR = tuple()
 
-    HTTP_ERRORS = (
-        (HTTPError, URLError, socket.error, ssl.SSLError, BadStatusLine) +
-        CERT_ERROR
-    )
-except ImportError:
-    ssl = None
-    HTTP_ERRORS = (HTTPError, URLError, socket.error, BadStatusLine)
+HTTP_ERRORS = (
+    (HTTPError, URLError, socket.error, ssl.SSLError, BadStatusLine) +
+    CERT_ERROR
+)
 
-if PY32PLUS:
-    etree_iter = ET.Element.iter
-elif PY25PLUS:
-    etree_iter = ET_Element.getiterator
-
-if PY26PLUS:
-    thread_is_alive = threading.Thread.is_alive
-else:
-    thread_is_alive = threading.Thread.isAlive
-
-
-def event_is_set(event):
-    try:
-        return event.is_set()
-    except AttributeError:
-        return event.isSet()
+etree_iter = ET.Element.iter
+thread_is_alive = threading.Thread.is_alive
 
 
 class SpeedtestException(Exception):
@@ -373,47 +162,6 @@ class SpeedtestMissingBestServer(SpeedtestException):
     """get_best_server not called or not able to determine best server"""
 
 
-def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
-                      source_address=None):
-    """Connect to *address* and return the socket object.
-
-    Convenience function.  Connect to *address* (a 2-tuple ``(host,
-    port)``) and return the socket object.  Passing the optional
-    *timeout* parameter will set the timeout on the socket instance
-    before attempting to connect.  If no *timeout* is supplied, the
-    global default timeout setting returned by :func:`getdefaulttimeout`
-    is used.  If *source_address* is set it must be a tuple of (host, port)
-    for the socket to bind as a source address before making the connection.
-    An host of '' or port 0 tells the OS to use the default.
-
-    Largely vendored from Python 2.7, modified to work with Python 2.4
-    """
-
-    host, port = address
-    err = None
-    for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
-        sock = None
-        try:
-            sock = socket.socket(af, socktype, proto)
-            if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
-                sock.settimeout(float(timeout))
-            if source_address:
-                sock.bind(source_address)
-            sock.connect(sa)
-            return sock
-
-        except socket.error:
-            err = get_exception()
-            if sock is not None:
-                sock.close()
-
-    if err is not None:
-        raise err
-    else:
-        raise socket.error("getaddrinfo returns an empty list")
-
-
 class SpeedtestHTTPConnection(HTTPConnection):
     """Custom HTTPConnection to support source_address across
     Python 2.4 - Python 3
@@ -431,88 +179,58 @@ class SpeedtestHTTPConnection(HTTPConnection):
 
     def connect(self):
         """Connect to the host and port specified in __init__."""
-        try:
-            self.sock = socket.create_connection(
-                (self.host, self.port),
-                self.timeout,
-                self.source_address
-            )
-        except (AttributeError, TypeError):
-            self.sock = create_connection(
-                (self.host, self.port),
-                self.timeout,
-                self.source_address
-            )
+        self.sock = socket.create_connection(
+            (self.host, self.port),
+            self.timeout,
+            self.source_address
+        )
 
         if self._tunnel_host:
             self._tunnel()
 
 
-if HTTPSConnection:
-    class SpeedtestHTTPSConnection(HTTPSConnection):
-        """Custom HTTPSConnection to support source_address across
-        Python 2.4 - Python 3
-        """
-        default_port = 443
+class SpeedtestHTTPSConnection(HTTPSConnection):
+    """Custom HTTPSConnection to support source_address across
+    Python 2.4 - Python 3
+    """
+    default_port = 443
 
-        def __init__(self, *args, **kwargs):
-            source_address = kwargs.pop('source_address', None)
-            timeout = kwargs.pop('timeout', 10)
+    def __init__(self, *args, **kwargs):
+        source_address = kwargs.pop('source_address', None)
+        timeout = kwargs.pop('timeout', 10)
 
-            self._tunnel_host = None
+        self._tunnel_host = None
 
-            HTTPSConnection.__init__(self, *args, **kwargs)
+        HTTPSConnection.__init__(self, *args, **kwargs)
 
-            self.timeout = timeout
-            self.source_address = source_address
+        self.timeout = timeout
+        self.source_address = source_address
 
-        def connect(self):
-            "Connect to a host on a given (SSL) port."
+    def connect(self):
+        "Connect to a host on a given (SSL) port."
+        self.sock = socket.create_connection(
+            (self.host, self.port),
+            self.timeout,
+            self.source_address
+        )
+
+        if self._tunnel_host:
+            self._tunnel()
+
+        try:
+            kwargs = {}
+            if hasattr(ssl, 'SSLContext'):
+                if self._tunnel_host:
+                    kwargs['server_hostname'] = self._tunnel_host
+                else:
+                    kwargs['server_hostname'] = self.host
+            self.sock = self._context.wrap_socket(self.sock, **kwargs)
+        except AttributeError:
+            self.sock = ssl.wrap_socket(self.sock)
             try:
-                self.sock = socket.create_connection(
-                    (self.host, self.port),
-                    self.timeout,
-                    self.source_address
-                )
-            except (AttributeError, TypeError):
-                self.sock = create_connection(
-                    (self.host, self.port),
-                    self.timeout,
-                    self.source_address
-                )
-
-            if self._tunnel_host:
-                self._tunnel()
-
-            if ssl:
-                try:
-                    kwargs = {}
-                    if hasattr(ssl, 'SSLContext'):
-                        if self._tunnel_host:
-                            kwargs['server_hostname'] = self._tunnel_host
-                        else:
-                            kwargs['server_hostname'] = self.host
-                    self.sock = self._context.wrap_socket(self.sock, **kwargs)
-                except AttributeError:
-                    self.sock = ssl.wrap_socket(self.sock)
-                    try:
-                        self.sock.server_hostname = self.host
-                    except AttributeError:
-                        pass
-            elif FakeSocket:
-                # Python 2.4/2.5 support
-                try:
-                    self.sock = FakeSocket(self.sock, socket.ssl(self.sock))
-                except AttributeError:
-                    raise SpeedtestException(
-                        'This version of Python does not support HTTPS/SSL '
-                        'functionality'
-                    )
-            else:
-                raise SpeedtestException(
-                    'This version of Python does not support HTTPS/SSL '
-                    'functionality'
-                )
+                self.sock.server_hostname = self.host
+            except AttributeError:
+                pass
 
 
 def _build_connection(connection, source_address, timeout, context=None):
@@ -773,12 +491,12 @@ def get_attributes_by_tag_name(dom, tag_name):
     return dict(list(elem.attributes.items()))
 
 
-def print_dots(shutdown_event):
+def print_dots(shutdown_event: threading.Event):
     """Built in callback function used by Thread classes for printing
     status
     """
     def inner(current, total, start=False, end=False):
-        if event_is_set(shutdown_event):
+        if shutdown_event.is_set():
             return
 
         sys.stdout.write('.')
@@ -796,7 +514,7 @@ class HTTPDownloader(threading.Thread):
     """Thread class for retrieving a URL"""
 
     def __init__(self, i, request, start, timeout, opener=None,
-                 shutdown_event=None):
+                 shutdown_event: threading.Event | None =None):
         threading.Thread.__init__(self)
         self.request = request
         self.result = [0]
@@ -817,7 +535,7 @@ class HTTPDownloader(threading.Thread):
         try:
             if (timeit.default_timer() - self.starttime) <= self.timeout:
                 f = self._opener(self.request)
-                while (not event_is_set(self._shutdown_event) and
+                while (not self._shutdown_event.is_set() and
                         (timeit.default_timer() - self.starttime) <=
                         self.timeout):
                     self.result.append(len(f.read(10240)))
@@ -873,7 +591,7 @@ class HTTPUploaderData(object):
 
     def read(self, n=10240):
         if ((timeit.default_timer() - self.start) <= self.timeout and
-                not event_is_set(self._shutdown_event)):
+                not self._shutdown_event.is_set()):
             chunk = self.data.read(n)
             self.total.append(len(chunk))
             return chunk
@@ -888,7 +606,7 @@ class HTTPUploader(threading.Thread):
     """Thread class for putting a URL"""
 
     def __init__(self, i, request, start, size, timeout, opener=None,
-                 shutdown_event=None):
+                 shutdown_event: threading.Event | None =None):
         threading.Thread.__init__(self)
         self.request = request
         self.request.data.start = self.starttime = start
@@ -911,7 +629,7 @@ class HTTPUploader(threading.Thread):
         request = self.request
         try:
             if ((timeit.default_timer() - self.starttime) <= self.timeout and
-                    not event_is_set(self._shutdown_event)):
+                    not self._shutdown_event.is_set()):
                 try:
                     f = self._opener(request)
                 except TypeError:
@@ -1748,7 +1466,7 @@ def parse_args():
                         help='Suppress verbose output, only show basic '
                              'information in CSV format. Speeds listed in '
                              'bit/s and not affected by --bytes')
-    parser.add_argument('--csv-delimiter', default=',', type=PARSER_TYPE_STR,
+    parser.add_argument('--csv-delimiter', default=',', type=str,
                         help='Single character delimiter to use in CSV '
                              'output. Default ","')
     parser.add_argument('--csv-header', action='store_true', default=False,
@@ -1760,15 +1478,15 @@ def parse_args():
     parser.add_argument('--list', action='store_true',
                         help='Display a list of speedtest.net servers '
                              'sorted by distance')
-    parser.add_argument('--server', type=PARSER_TYPE_INT, action='append',
+    parser.add_argument('--server', type=int, action='append',
                         help='Specify a server ID to test against. Can be '
                              'supplied multiple times')
-    parser.add_argument('--exclude', type=PARSER_TYPE_INT, action='append',
+    parser.add_argument('--exclude', type=int, action='append',
                         help='Exclude a server from selection. Can be '
                              'supplied multiple times')
     parser.add_argument('--mini', help='URL of the Speedtest Mini server')
     parser.add_argument('--source', help='Source IP address to bind to')
-    parser.add_argument('--timeout', default=10, type=PARSER_TYPE_FLOAT,
+    parser.add_argument('--timeout', default=10, type=float,
                         help='HTTP timeout in seconds. Default 10')
     parser.add_argument('--secure', action='store_true',
                         help='Use HTTPS instead of HTTP when communicating '
@@ -1829,7 +1547,7 @@ def printer(string, quiet=False, debug=False, error=False, **kwargs):
         kwargs['file'] = sys.stderr
 
     if not quiet:
-        print_(out, **kwargs)
+        print(out, **kwargs)
 
 
 def shell():
@@ -1998,7 +1716,7 @@ def main():
     try:
         shell()
     except KeyboardInterrupt:
-        printer('\nCancelling...', error=True)
+        print('Cancelling...', file=sys.stderr)
     except (SpeedtestException, SystemExit):
         e = get_exception()
         # Ignore a successful exit, or argparse exit
