@@ -69,8 +69,8 @@ setup(
     py_modules=['speedtest'],
     entry_points={
         'console_scripts': [
-            'speedtest=speedtest:main',
-            'speedtest-cli=speedtest:main'
+            'speedtest=speedtest.__main__:main',
+            'speedtest-cli=speedtest.__main__:main'
         ]
     },
     classifiers=[
