@@ -1,6 +1,10 @@
+"""
+Command line interface parser.
+
+"""
+
 from argparse import ArgumentParser
 import errno
-import json
 import signal
 import sys
 import threading
