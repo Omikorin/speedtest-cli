@@ -3,12 +3,7 @@ import sys
 import threading
 
 global DEBUG
-DEBUG = True
-
-
-def to_utf8(v):
-    """No-op encode to utf-8 for py3"""
-    return v
+DEBUG = False
 
 
 def distance(origin, destination):
