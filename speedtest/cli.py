@@ -1,11 +1,17 @@
 from argparse import ArgumentParser
 import errno
-from http.client import HTTPSConnection
 import json
 import signal
 import sys
 import threading
 
+try:
+    from http.client import HTTPSConnection
+except ImportError:
+    HTTPSConnection = None
+
+
+from speedtest import __version__
 from speedtest.exceptions import (
     ConfigRetrievalError,
     InvalidServerIDType,
@@ -16,7 +22,8 @@ from speedtest.exceptions import (
 from speedtest.http import HTTP_ERRORS
 from speedtest.results import SpeedtestResults
 from speedtest.speedtest import Speedtest
-from speedtest.utils import do_nothing, print_dots, printer
+from speedtest.status import ExitStatus
+from speedtest.utils import DEBUG, do_nothing, print_dots, printer
 
 
 def ctrl_c(shutdown_event):
@@ -26,42 +33,47 @@ def ctrl_c(shutdown_event):
 
     def inner(signum, frame):
         shutdown_event.set()
-        printer("\nCancelling...", error=True)
-        sys.exit(0)
+        print("Cancelling...", file=sys.stderr)
+        raise KeyboardInterrupt
 
     return inner
-
-
-__version__ = "2.1.4b1"
 
 
 def version():
     """Print the version"""
 
-    printer("speedtest-cli %s" % __version__)
-    printer("Python %s" % sys.version.replace("\n", ""))
-    sys.exit(0)
+    print("speedtest-cli-ng %s" % __version__)
+    return ExitStatus.SUCCESS
 
 
 def csv_header(delimiter=","):
     """Print the CSV Headers"""
 
-    printer(SpeedtestResults.csv_header(delimiter=delimiter))
-    sys.exit(0)
+    print(SpeedtestResults.csv_header(delimiter=delimiter))
+    return ExitStatus.SUCCESS
 
 
 def parse_args():
     """Function to handle building and parsing of command line arguments"""
+
     description = (
         "Command line interface for testing internet bandwidth using "
         "speedtest.net.\n"
         "------------------------------------------------------------"
         "--------------\n"
-        "https://github.com/sivel/speedtest-cli"
+        "https://github.com/Omikorin/speedtest-cli-ng"
     )
 
     parser = ArgumentParser(description=description)
 
+    parser.add_argument(
+        "--single",
+        default=False,
+        action="store_true",
+        help="Only use a single connection instead of "
+        "multiple. This simulates a typical file "
+        "transfer.",
+    )
     parser.add_argument(
         "--no-download",
         dest="download",
@@ -77,14 +89,6 @@ def parse_args():
         action="store_const",
         const=False,
         help="Do not perform upload test",
-    )
-    parser.add_argument(
-        "--single",
-        default=False,
-        action="store_true",
-        help="Only use a single connection instead of "
-        "multiple. This simulates a typical file "
-        "transfer.",
     )
     parser.add_argument(
         "--bytes",
@@ -174,7 +178,7 @@ def parse_args():
         "MemoryError",
     )
     parser.add_argument(
-        "--version", action="store_true", help="Show the version number and exit"
+        "--version", action="store_true", help="Show the program version"
     )
     parser.add_argument(
         "--debug", action="store_true", default=False, help="Show debugging output"
@@ -191,7 +195,6 @@ def validate_optional_args(args):
     with an error stating which module is missing.
     """
     optional_args = {
-        "json": ("json/simplejson python module", json),
         "secure": ("SSL support", HTTPSConnection),
     }
 
@@ -211,25 +214,21 @@ def shell():
 
     args = parse_args()
 
-    # Print the version and exit
     if args.version:
-        version()
+        return version()
 
     if not args.download and not args.upload:
-        raise SpeedtestCLIError("Cannot supply both --no-download and " "--no-upload")
+        raise SpeedtestCLIError("Cannot supply both --no-download and --no-upload")
 
     if len(args.csv_delimiter) != 1:
         raise SpeedtestCLIError("--csv-delimiter must be a single character")
 
     if args.csv_header:
-        csv_header(args.csv_delimiter)
+        return csv_header(args.csv_delimiter)
 
     validate_optional_args(args)
 
-    debug = getattr(args, "debug", False)
-    if debug == "SUPPRESSHELP":
-        debug = False
-    if debug:
+    if args.debug:
         DEBUG = True
 
     if args.simple or args.csv or args.json:
@@ -243,7 +242,7 @@ def shell():
         machine_format = False
 
     # Don't set a callback if we are running quietly
-    if quiet or debug:
+    if quiet or args.debug:
         callback = do_nothing
     else:
         callback = print_dots(shutdown_event)
@@ -275,7 +274,7 @@ def shell():
                 except IOError as e:
                     if e.errno != errno.EPIPE:
                         raise
-        sys.exit(0)
+        return ExitStatus.SUCCESS
 
     printer("Testing from %(isp)s (%(ip)s)..." % speedtest.config["client"], quiet)
 
@@ -313,7 +312,7 @@ def shell():
     )
 
     if args.download:
-        printer("Testing download speed", quiet, end=("", "\n")[bool(debug)])
+        printer("Testing download speed", quiet, end=("", "\n")[bool(args.debug)])
         speedtest.download(callback=callback, threads=(None, 1)[args.single])
         printer(
             "Download: %0.2f M%s/s"
@@ -324,7 +323,7 @@ def shell():
         printer("Skipping download test", quiet)
 
     if args.upload:
-        printer("Testing upload speed", quiet, end=("", "\n")[bool(debug)])
+        printer("Testing upload speed", quiet, end=("", "\n")[bool(args.debug)])
         speedtest.upload(
             callback=callback,
             pre_allocate=args.pre_allocate,
@@ -361,3 +360,5 @@ def shell():
 
     if args.share and not machine_format:
         printer("Share results: %s" % results.share())
+
+    return ExitStatus.SUCCESS

@@ -7,7 +7,6 @@ from urllib.parse import parse_qs
 
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
 from speedtest.http import build_opener, build_request, catch_request
-from speedtest.utils import to_utf8
 
 
 class SpeedtestResults(object):
@@ -157,7 +156,7 @@ class SpeedtestResults(object):
         ]
         out = StringIO()
         writer = csv.writer(out, delimiter=delimiter, lineterminator="")
-        writer.writerow([to_utf8(v) for v in row])
+        writer.writerow([v for v in row])
         return out.getvalue()
 
     def csv(self, delimiter=","):
@@ -178,7 +177,7 @@ class SpeedtestResults(object):
             self._share or "",
             self.client["ip"],
         ]
-        writer.writerow([to_utf8(v) for v in row])
+        writer.writerow([v for v in row])
         return out.getvalue()
 
     def json(self, pretty=False):

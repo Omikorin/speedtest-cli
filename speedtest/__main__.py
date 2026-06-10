@@ -1,5 +1,5 @@
 """
-The main entry point.
+The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 
 """
 
@@ -13,17 +13,15 @@ def main():
     try:
         from speedtest.cli import shell
 
-        shell()
-        # TODO: exit_status = shell()
-        exit_status: ExitStatus = ExitStatus.SUCCESS
+        exit_status = shell()
     except KeyboardInterrupt:
         print("Stopping speedtest-cli...")
 
-        exit_status: ExitStatus = ExitStatus.ERROR_CTRL_C
-    except (SpeedtestException, SystemExit) as e:
+        exit_status = ExitStatus.ERROR_CTRL_C
+    except SpeedtestException as e:
         # TODO: Rework
-        # Ignore a successful exit, or argparse exit
-        if getattr(e, "code", 1) not in (0, 2):
+
+        if getattr(e, "code", 1) not in (ExitStatus.SUCCESS, ExitStatus.ERROR_CTRL_C):
             msg = "%s" % e
             if not msg:
                 msg = "%r" % e
@@ -36,4 +34,5 @@ if __name__ == "__main__":
     # TODO: Check if this is needed
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
+
     sys.exit(main())

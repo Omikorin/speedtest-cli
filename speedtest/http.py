@@ -29,6 +29,7 @@ from urllib.request import (
     urlopen,
 )
 
+from speedtest import __version__
 from speedtest.exceptions import (
     SpeedtestCLIError,
     SpeedtestHTTPError,
@@ -251,9 +252,6 @@ class GzipDecodedResponse(GZIP_BASE):
             self.io.close()
 
 
-__version__ = "2.1.4b1"
-
-
 def build_user_agent():
     """Build a Mozilla/5.0 compatible User-Agent string"""
 
@@ -262,7 +260,7 @@ def build_user_agent():
         "(%s; U; %s; en-us)" % (platform.platform(), platform.architecture()[0]),
         "Python/%s" % platform.python_version(),
         "(KHTML, like Gecko)",
-        "speedtest-cli/%s" % __version__,
+        "speedtest-cli-ng/%s" % __version__,
     )
     user_agent = " ".join(ua_tuple)
     printer("User-Agent: %s" % user_agent, debug=True)
