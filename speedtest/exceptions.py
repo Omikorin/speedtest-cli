@@ -1,6 +1,5 @@
-"""Speedtest-related exceptions
+"""Speedtest-related exceptions"""
 
-"""
 
 class SpeedtestException(Exception):
     """Base exception for this module"""

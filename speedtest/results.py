@@ -1,4 +1,3 @@
-
 import csv
 from datetime import datetime
 from hashlib import md5
@@ -24,8 +23,16 @@ class SpeedtestResults(object):
     to get a share results image link.
     """
 
-    def __init__(self, download=0, upload=0, ping=0, server=None, client=None,
-                 opener=None, secure=False):
+    def __init__(
+        self,
+        download=0,
+        upload=0,
+        ping=0,
+        server=None,
+        client=None,
+        opener=None,
+        secure=False,
+    ):
         self.download = download
         self.upload = upload
         self.ping = ping
@@ -36,7 +43,7 @@ class SpeedtestResults(object):
         self.client = client or {}
 
         self._share = None
-        self.timestamp = '%sZ' % datetime.utcnow().isoformat()
+        self.timestamp = "%sZ" % datetime.utcnow().isoformat()
         self.bytes_received = 0
         self.bytes_sent = 0
 
@@ -66,29 +73,33 @@ class SpeedtestResults(object):
         # We use a list instead of a dict because the API expects parameters
         # in a certain order
         api_data = [
-            'recommendedserverid=%s' % self.server['id'],
-            'ping=%s' % ping,
-            'screenresolution=',
-            'promo=',
-            'download=%s' % download,
-            'screendpi=',
-            'upload=%s' % upload,
-            'testmethod=http',
-            'hash=%s' % md5(('%s-%s-%s-%s' %
-                             (ping, upload, download, '297aae72'))
-                            .encode()).hexdigest(),
-            'touchscreen=none',
-            'startmode=pingselect',
-            'accuracy=1',
-            'bytesreceived=%s' % self.bytes_received,
-            'bytessent=%s' % self.bytes_sent,
-            'serverid=%s' % self.server['id'],
+            "recommendedserverid=%s" % self.server["id"],
+            "ping=%s" % ping,
+            "screenresolution=",
+            "promo=",
+            "download=%s" % download,
+            "screendpi=",
+            "upload=%s" % upload,
+            "testmethod=http",
+            "hash=%s"
+            % md5(
+                ("%s-%s-%s-%s" % (ping, upload, download, "297aae72")).encode()
+            ).hexdigest(),
+            "touchscreen=none",
+            "startmode=pingselect",
+            "accuracy=1",
+            "bytesreceived=%s" % self.bytes_received,
+            "bytessent=%s" % self.bytes_sent,
+            "serverid=%s" % self.server["id"],
         ]
 
-        headers = {'Referer': 'http://c.speedtest.net/flash/speedtest.swf'}
-        request = build_request('://www.speedtest.net/api/api.php',
-                                data='&'.join(api_data).encode(),
-                                headers=headers, secure=self._secure)
+        headers = {"Referer": "http://c.speedtest.net/flash/speedtest.swf"}
+        request = build_request(
+            "://www.speedtest.net/api/api.php",
+            data="&".join(api_data).encode(),
+            headers=headers,
+            secure=self._secure,
+        )
         f, e = catch_request(request, opener=self._opener)
         if e:
             raise ShareResultsConnectFailure(e)
@@ -98,16 +109,18 @@ class SpeedtestResults(object):
         f.close()
 
         if int(code) != 200:
-            raise ShareResultsSubmitFailure('Could not submit results to '
-                                            'speedtest.net')
+            raise ShareResultsSubmitFailure(
+                "Could not submit results to " "speedtest.net"
+            )
 
         qsargs = parse_qs(response.decode())
-        resultid = qsargs.get('resultid')
+        resultid = qsargs.get("resultid")
         if not resultid or len(resultid) != 1:
-            raise ShareResultsSubmitFailure('Could not submit results to '
-                                            'speedtest.net')
+            raise ShareResultsSubmitFailure(
+                "Could not submit results to " "speedtest.net"
+            )
 
-        self._share = 'http://www.speedtest.net/result/%s.png' % resultid[0]
+        self._share = "http://www.speedtest.net/result/%s.png" % resultid[0]
 
         return self._share
 
@@ -115,38 +128,56 @@ class SpeedtestResults(object):
         """Return dictionary of result data"""
 
         return {
-            'download': self.download,
-            'upload': self.upload,
-            'ping': self.ping,
-            'server': self.server,
-            'timestamp': self.timestamp,
-            'bytes_sent': self.bytes_sent,
-            'bytes_received': self.bytes_received,
-            'share': self._share,
-            'client': self.client,
+            "download": self.download,
+            "upload": self.upload,
+            "ping": self.ping,
+            "server": self.server,
+            "timestamp": self.timestamp,
+            "bytes_sent": self.bytes_sent,
+            "bytes_received": self.bytes_received,
+            "share": self._share,
+            "client": self.client,
         }
 
     @staticmethod
-    def csv_header(delimiter=','):
+    def csv_header(delimiter=","):
         """Return CSV Headers"""
 
-        row = ['Server ID', 'Sponsor', 'Server Name', 'Timestamp', 'Distance',
-               'Ping', 'Download', 'Upload', 'Share', 'IP Address']
+        row = [
+            "Server ID",
+            "Sponsor",
+            "Server Name",
+            "Timestamp",
+            "Distance",
+            "Ping",
+            "Download",
+            "Upload",
+            "Share",
+            "IP Address",
+        ]
         out = StringIO()
-        writer = csv.writer(out, delimiter=delimiter, lineterminator='')
+        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
         writer.writerow([to_utf8(v) for v in row])
         return out.getvalue()
 
-    def csv(self, delimiter=','):
+    def csv(self, delimiter=","):
         """Return data in CSV format"""
 
         data = self.dict()
         out = StringIO()
-        writer = csv.writer(out, delimiter=delimiter, lineterminator='')
-        row = [data['server']['id'], data['server']['sponsor'],
-               data['server']['name'], data['timestamp'],
-               data['server']['d'], data['ping'], data['download'],
-               data['upload'], self._share or '', self.client['ip']]
+        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
+        row = [
+            data["server"]["id"],
+            data["server"]["sponsor"],
+            data["server"]["name"],
+            data["timestamp"],
+            data["server"]["d"],
+            data["ping"],
+            data["download"],
+            data["upload"],
+            self._share or "",
+            self.client["ip"],
+        ]
         writer.writerow([to_utf8(v) for v in row])
         return out.getvalue()
 
@@ -155,9 +186,5 @@ class SpeedtestResults(object):
 
         kwargs = {}
         if pretty:
-            kwargs.update({
-                'indent': 4,
-                'sort_keys': True
-            })
+            kwargs.update({"indent": 4, "sort_keys": True})
         return json.dumps(self.dict(), **kwargs)
-
