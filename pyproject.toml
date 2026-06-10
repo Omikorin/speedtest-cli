@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speedtest-cli-ng"
+dynamic = ["version"]
+authors = [
+    {name = "Michał Korczak", email = "git@omikor.in"}
+]
+description = "Command line interface for testing internet bandwidth using speedtest.net"
+readme = "README.md"
+requires-python = ">=3.12"
+keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Networking",
+    "Topic :: Terminals",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/Omikorin/speedtest-cli-ng"
+GitHub = "https://github.com/Omikorin/speedtest-cli-ng"
+
+[project.scripts]
+speedtest = "speedtest.__main__:main"
+speedtest-cli = "speedtest.__main__:main"
+
+# Tool-specific configurations (Setuptools helpers)
+[tool.setuptools.packages.find]
+include = ["speedtest", "speedtest.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "speedtest.__version__"}
+
+[tool.setuptools.data-files]
+"share/man/man1" = ["extras/man/speedtest-cli.1"]
