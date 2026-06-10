@@ -1,4 +1,7 @@
-"""The main entry point."""
+"""
+The main entry point.
+
+"""
 
 import sys
 
