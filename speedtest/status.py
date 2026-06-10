@@ -1,6 +1,5 @@
 """
 Program exit status codes.
-
 """
 
 from enum import IntEnum, unique
