@@ -88,9 +88,6 @@ HTTP_ERRORS = (
     CERT_ERROR
 )
 
-etree_iter = ET.Element.iter
-thread_is_alive = threading.Thread.is_alive
-
 
 class SpeedtestException(Exception):
     """Base exception for this module"""
@@ -364,13 +361,6 @@ class GzipDecodedResponse(GZIP_BASE):
             self.io.close()
 
 
-def get_exception():
-    """Helper function to work with py2.4-py3 for getting the current
-    exception in a try/except block
-    """
-    return sys.exc_info()[1]
-
-
 def distance(origin, destination):
     """Determine distance between 2 sets of [lat,lon] in km"""
 
@@ -458,8 +448,7 @@ def catch_request(request, opener=None):
         if request.get_full_url() != uh.geturl():
             printer('Redirected to %s' % uh.geturl(), debug=True)
         return uh, False
-    except HTTP_ERRORS:
-        e = get_exception()
+    except HTTP_ERRORS as e:
         return None, e
 
 
@@ -859,8 +848,8 @@ class Speedtest(object):
         while 1:
             try:
                 configxml_list.append(stream.read(1024))
-            except (OSError, EOFError):
-                raise ConfigRetrievalError(get_exception())
+            except (OSError, EOFError) as e:
+                raise ConfigRetrievalError(e) from e
             if len(configxml_list[-1]) == 0:
                 break
         stream.close()
@@ -876,8 +865,7 @@ class Speedtest(object):
         try:
             try:
                 root = ET.fromstring(configxml)
-            except ET.ParseError:
-                e = get_exception()
+            except ET.ParseError as e:
                 raise SpeedtestConfigError(
                     'Malformed speedtest.net configuration: %s' % e
                 )
@@ -890,8 +878,7 @@ class Speedtest(object):
         except AttributeError:
             try:
                 root = DOM.parseString(configxml)
-            except ExpatError:
-                e = get_exception()
+            except ExpatError as e:
                 raise SpeedtestConfigError(
                     'Malformed speedtest.net configuration: %s' % e
                 )
@@ -1007,8 +994,8 @@ class Speedtest(object):
                 while 1:
                     try:
                         serversxml_list.append(stream.read(1024))
-                    except (OSError, EOFError):
-                        raise ServersRetrievalError(get_exception())
+                    except (OSError, EOFError) as e:
+                        raise ServersRetrievalError(e) from e
                     if len(serversxml_list[-1]) == 0:
                         break
 
@@ -1026,17 +1013,15 @@ class Speedtest(object):
                     try:
                         try:
                             root = ET.fromstring(serversxml)
-                        except ET.ParseError:
-                            e = get_exception()
+                        except ET.ParseError as e:
                             raise SpeedtestServersError(
                                 'Malformed speedtest.net server list: %s' % e
                             )
-                        elements = etree_iter(root, 'server')
+                        elements = ET.Element.iter(root, 'server')
                     except AttributeError:
                         try:
                             root = DOM.parseString(serversxml)
-                        except ExpatError:
-                            e = get_exception()
+                        except ExpatError as e:
                             raise SpeedtestServersError(
                                 'Malformed speedtest.net server list: %s' % e
                             )
@@ -1200,8 +1185,7 @@ class Speedtest(object):
                     h.request("GET", path, headers=headers)
                     r = h.getresponse()
                     total = (timeit.default_timer() - start)
-                except HTTP_ERRORS:
-                    e = get_exception()
+                except HTTP_ERRORS as e:
                     printer('ERROR: %r' % e, debug=True)
                     cum.append(3600)
                     continue
@@ -1274,7 +1258,7 @@ class Speedtest(object):
         finished = []
 
         def consumer(q, request_count):
-            _is_alive = thread_is_alive
+            _is_alive = threading.Thread.is_alive
             while len(finished) < request_count:
                 thread = q.get(True)
                 while _is_alive(thread):
@@ -1291,7 +1275,7 @@ class Speedtest(object):
         start = timeit.default_timer()
         prod_thread.start()
         cons_thread.start()
-        _is_alive = thread_is_alive
+        _is_alive = threading.Thread.is_alive
         while _is_alive(prod_thread):
             prod_thread.join(timeout=0.001)
         while _is_alive(cons_thread):
@@ -1368,7 +1352,7 @@ class Speedtest(object):
         finished = []
 
         def consumer(q, request_count):
-            _is_alive = thread_is_alive
+            _is_alive = threading.Thread.is_alive
             while len(finished) < request_count:
                 thread = q.get(True)
                 while _is_alive(thread):
@@ -1385,7 +1369,7 @@ class Speedtest(object):
         start = timeit.default_timer()
         prod_thread.start()
         cons_thread.start()
-        _is_alive = thread_is_alive
+        _is_alive = threading.Thread.is_alive
         while _is_alive(prod_thread):
             prod_thread.join(timeout=0.1)
         while _is_alive(cons_thread):
@@ -1605,16 +1589,16 @@ def shell():
             timeout=args.timeout,
             secure=args.secure
         )
-    except (ConfigRetrievalError,) + HTTP_ERRORS:
+    except (ConfigRetrievalError,) + HTTP_ERRORS as e:
         printer('Cannot retrieve speedtest configuration', error=True)
-        raise SpeedtestCLIError(get_exception())
+        raise SpeedtestCLIError(e) from e
 
     if args.list:
         try:
             speedtest.get_servers()
-        except (ServersRetrievalError,) + HTTP_ERRORS:
+        except (ServersRetrievalError,) + HTTP_ERRORS as e:
             printer('Cannot retrieve speedtest server list', error=True)
-            raise SpeedtestCLIError(get_exception())
+            raise SpeedtestCLIError(e) from e
 
         for _, servers in sorted(speedtest.servers.items()):
             for server in servers:
@@ -1622,8 +1606,7 @@ def shell():
                         '[%(d)0.2f km]' % server)
                 try:
                     printer(line)
-                except IOError:
-                    e = get_exception()
+                except IOError as e:
                     if e.errno != errno.EPIPE:
                         raise
         sys.exit(0)
@@ -1640,9 +1623,9 @@ def shell():
                 'No matched servers: %s' %
                 ', '.join('%s' % s for s in args.server)
             )
-        except (ServersRetrievalError,) + HTTP_ERRORS:
+        except (ServersRetrievalError,) + HTTP_ERRORS as e:
             printer('Cannot retrieve speedtest server list', error=True)
-            raise SpeedtestCLIError(get_exception())
+            raise SpeedtestCLIError(e) from e
         except InvalidServerIDType:
             raise SpeedtestCLIError(
                 '%s is an invalid server type, must '
@@ -1717,8 +1700,7 @@ def main():
         shell()
     except KeyboardInterrupt:
         print('Cancelling...', file=sys.stderr)
-    except (SpeedtestException, SystemExit):
-        e = get_exception()
+    except (SpeedtestException, SystemExit) as e:
         # Ignore a successful exit, or argparse exit
         if getattr(e, 'code', 1) not in (0, 2):
             msg = '%s' % e
