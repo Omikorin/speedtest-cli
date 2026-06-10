@@ -59,7 +59,7 @@ _GLOBAL_DEFAULT_TIMEOUT = object()
 
 import json
 import xml.etree.ElementTree as ET
-from urllib.request import (urlopen, Request, HTTPError, URLError,
+from urllib.request import (urlopen, Request, HTTPError,
                             AbstractHTTPHandler, ProxyHandler,
                             HTTPDefaultErrorHandler, HTTPRedirectHandler,
                             HTTPErrorProcessor, OpenerDirector)
@@ -67,10 +67,8 @@ from http.client import HTTPConnection, HTTPSConnection, BadStatusLine
 from queue import Queue
 from urllib.parse import urlparse, parse_qs
 from hashlib import md5
-from argparse import ArgumentParser as ArgParser
-from argparse import SUPPRESS as ARG_SUPPRESS
-from io import StringIO, BytesIO, TextIOWrapper, FileIO
-import builtins
+from argparse import ArgumentParser
+from io import StringIO, BytesIO
 
 def to_utf8(v):
     """No-op encode to utf-8 for py3"""
@@ -84,7 +82,7 @@ except AttributeError:
     CERT_ERROR = tuple()
 
 HTTP_ERRORS = (
-    (HTTPError, URLError, socket.error, ssl.SSLError, BadStatusLine) +
+    (HTTPError, socket.error, ssl.SSLError, BadStatusLine) +
     CERT_ERROR
 )
 
@@ -1418,13 +1416,8 @@ def parse_args():
         '--------------\n'
         'https://github.com/sivel/speedtest-cli')
 
-    parser = ArgParser(description=description)
-    # Give optparse.OptionParser an `add_argument` method for
-    # compatibility with argparse.ArgumentParser
-    try:
-        parser.add_argument = parser.add_option
-    except AttributeError:
-        pass
+    parser = ArgumentParser(description=description)
+
     parser.add_argument('--no-download', dest='download', default=True,
                         action='store_const', const=False,
                         help='Do not perform download test')
@@ -1484,15 +1477,10 @@ def parse_args():
                              'MemoryError')
     parser.add_argument('--version', action='store_true',
                         help='Show the version number and exit')
-    parser.add_argument('--debug', action='store_true',
-                        help=ARG_SUPPRESS, default=ARG_SUPPRESS)
+    parser.add_argument('--debug', action='store_true', default=False,
+                        help='Show debugging output')
 
-    options = parser.parse_args()
-    if isinstance(options, tuple):
-        args = options[0]
-    else:
-        args = options
-    return args
+    return parser.parse_args()
 
 
 def validate_optional_args(args):
