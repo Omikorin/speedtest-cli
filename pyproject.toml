@@ -8,6 +8,8 @@ dynamic = ["version"]
 authors = [
     {name = "Michał Korczak", email = "git@omikor.in"}
 ]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 description = "Command line interface for testing internet bandwidth using speedtest.net"
 readme = "README.md"
 requires-python = ">=3.12"
