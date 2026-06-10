@@ -1,77 +1,85 @@
 import math
 import sys
 import threading
+from typing import Callable, Any
 
-global DEBUG
-DEBUG = False
+DEBUG: bool = False
 
 
-def distance(origin, destination):
-    """Determine distance between 2 sets of [lat,lon] in km"""
+def distance(origin: tuple[float, float], destination: tuple[float, float]) -> float:
+    """Determine distance between 2 sets of [lat, lon] in km using the Haversine formula."""
 
     lat1, lon1 = origin
     lat2, lon2 = destination
-    radius = 6371  # km
+    radius = 6371.0  # km
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(
-        math.radians(lat1)
-    ) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) * math.sin(dlon / 2)
+
+    a = (math.sin(dlat / 2) ** 2) + (
+        math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * (math.sin(dlon / 2) ** 2)
+    )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    d = radius * c
 
-    return d
+    return radius * c
 
 
-def get_attributes_by_tag_name(dom, tag_name):
-    """Retrieve an attribute from an XML document and return it in a
-    consistent format
+def get_attributes_by_tag_name(dom: Any, tag_name: str) -> dict[str, str]:
+    """Retrieve an attribute from an XML document and return it in a consistent format."""
 
-    Only used with xml.dom.minidom, which is likely only to be used
-    with python versions older than 2.5
-    """
     elem = dom.getElementsByTagName(tag_name)[0]
-    return dict(list(elem.attributes.items()))
+
+    return dict(elem.attributes.items())
 
 
-def print_dots(shutdown_event: threading.Event):
-    """Built in callback function used by Thread classes for printing
-    status
-    """
+def print_dots(
+    shutdown_event: threading.Event,
+) -> Callable[[int, int, bool, bool], None]:
+    """Built-in callback function used by Thread classes for printing status."""
 
-    def inner(current, total, start=False, end=False):
+    def inner(current: int, total: int, start: bool = False, end: bool = False) -> None:
         if shutdown_event.is_set():
             return
 
-        sys.stdout.write(".")
-        if current + 1 == total and end is True:
-            sys.stdout.write("\n")
-        sys.stdout.flush()
+        if current + 1 == total and end:
+            print(".", flush=True)
+        else:
+            print(".", end="", flush=True)
 
     return inner
 
 
-def do_nothing(*args, **kwargs):
+def do_nothing(*args: Any, **kwargs: Any) -> None:
+    """No-op function for suppressed callbacks."""
     pass
 
 
-def printer(string, quiet=False, debug=False, error=False, **kwargs):
-    """Helper function print a string with various features"""
+def printer(
+    string: Any,
+    quiet: bool = False,
+    debug: bool = False,
+    error: bool = False,
+    **kwargs: Any,
+) -> None:
+    """Helper function to print a string with various features."""
 
     if debug and not DEBUG:
         return
 
-    if debug:
-        if sys.stdout.isatty():
-            out = "\033[1;30mDEBUG: %s\033[0m" % string
-        else:
-            out = "DEBUG: %s" % string
-    else:
-        out = string
-
     if error:
         kwargs["file"] = sys.stderr
+
+    if debug:
+        target_stream = kwargs.get("file", sys.stdout)
+
+        if target_stream.isatty():
+            out = f"\033[1;30mDEBUG: {string}\033[0m"
+        else:
+            out = f"DEBUG: {string}"
+    else:
+        out = str(string)
 
     if not quiet:
         print(out, **kwargs)
