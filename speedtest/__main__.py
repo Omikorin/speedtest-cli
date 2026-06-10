@@ -15,7 +15,7 @@ def main():
 
         exit_status = shell()
     except KeyboardInterrupt:
-        print("Stopping speedtest-cli...")
+        print("Stopped by user")
 
         exit_status = ExitStatus.ERROR_CTRL_C
     except SpeedtestException as e:
