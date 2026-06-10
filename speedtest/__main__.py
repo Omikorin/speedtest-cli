@@ -11,7 +11,7 @@ from speedtest.status import ExitStatus
 
 def main():
     try:
-        from .cli import shell
+        from speedtest.cli import shell
 
         shell()
         # TODO: exit_status = shell()
