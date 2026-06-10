@@ -1,5 +1,3 @@
-
-
 import math
 import sys
 import threading
@@ -13,7 +11,6 @@ def to_utf8(v):
     return v
 
 
-
 def distance(origin, destination):
     """Determine distance between 2 sets of [lat,lon] in km"""
 
@@ -23,15 +20,13 @@ def distance(origin, destination):
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) * math.sin(dlat / 2) +
-         math.cos(math.radians(lat1)) *
-         math.cos(math.radians(lat2)) * math.sin(dlon / 2) *
-         math.sin(dlon / 2))
+    a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(
+        math.radians(lat1)
+    ) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) * math.sin(dlon / 2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     d = radius * c
 
     return d
-
 
 
 def get_attributes_by_tag_name(dom, tag_name):
@@ -49,21 +44,21 @@ def print_dots(shutdown_event: threading.Event):
     """Built in callback function used by Thread classes for printing
     status
     """
+
     def inner(current, total, start=False, end=False):
         if shutdown_event.is_set():
             return
 
-        sys.stdout.write('.')
+        sys.stdout.write(".")
         if current + 1 == total and end is True:
-            sys.stdout.write('\n')
+            sys.stdout.write("\n")
         sys.stdout.flush()
+
     return inner
 
 
 def do_nothing(*args, **kwargs):
     pass
-
-
 
 
 def printer(string, quiet=False, debug=False, error=False, **kwargs):
@@ -74,15 +69,14 @@ def printer(string, quiet=False, debug=False, error=False, **kwargs):
 
     if debug:
         if sys.stdout.isatty():
-            out = '\033[1;30mDEBUG: %s\033[0m' % string
+            out = "\033[1;30mDEBUG: %s\033[0m" % string
         else:
-            out = 'DEBUG: %s' % string
+            out = "DEBUG: %s" % string
     else:
         out = string
 
     if error:
-        kwargs['file'] = sys.stderr
+        kwargs["file"] = sys.stderr
 
     if not quiet:
         print(out, **kwargs)
-
