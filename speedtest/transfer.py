@@ -1,8 +1,6 @@
 import os
-import threading
 import time
-import timeit
-from queue import Queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from speedtest.http import HTTPDownloader, HTTPUploader, HTTPUploaderData, build_request
@@ -35,54 +33,36 @@ def run_download_test(
     request_count = len(urls)
     requests = [build_request(url, bump=i, secure=secure) for i, url in enumerate(urls)]
     max_threads = threads or config["threads"]["download"]
-    in_flight = {"threads": 0}
 
-    def producer(q: Queue, reqs: List[Any], req_count: int) -> None:
-        for i, request in enumerate(reqs):
-            thread = HTTPDownloader(
-                i,
-                request,
-                start,
-                config["length"]["download"],
-                opener=opener,
-                shutdown_event=shutdown_event,
-            )
-            while in_flight["threads"] >= max_threads:
-                time.sleep(0.001)
+    # wrapper to execute the legacy thread payload
+    # TODO: modernize this
+    def _download_task(i: int, request: Any, start_time: float) -> float:
+        callback(i, request_count, start=True)
+        task = HTTPDownloader(
+            i,
+            request,
+            start_time,
+            config["length"]["download"],
+            opener=opener,
+            shutdown_event=shutdown_event,
+        )
+        task.run()
+        callback(i, request_count, end=True)
+        return sum(task.result)
 
-            thread.start()
-            q.put(thread, True)
-            in_flight["threads"] += 1
-            callback(i, req_count, start=True)
+    bytes_received = 0.0
+    start = time.perf_counter()
 
-    finished: List[float] = []
+    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+        futures = [
+            executor.submit(_download_task, i, req, start)
+            for i, req in enumerate(requests)
+        ]
 
-    def consumer(q: Queue, req_count: int) -> None:
-        while len(finished) < req_count:
-            thread = q.get(True)
-            while thread.is_alive():
-                thread.join(timeout=0.001)
+        for future in as_completed(futures):
+            bytes_received += future.result()
 
-            in_flight["threads"] -= 1
-            finished.append(sum(thread.result))
-            callback(thread.i, req_count, end=True)
-
-    q: Queue = Queue(max_threads)
-    prod_thread = threading.Thread(target=producer, args=(q, requests, request_count))
-    cons_thread = threading.Thread(target=consumer, args=(q, request_count))
-
-    start = timeit.default_timer()
-    prod_thread.start()
-    cons_thread.start()
-
-    while prod_thread.is_alive():
-        prod_thread.join(timeout=0.001)
-    while cons_thread.is_alive():
-        cons_thread.join(timeout=0.001)
-
-    stop = timeit.default_timer()
-
-    bytes_received = sum(finished)
+    stop = time.perf_counter()
     download_speed = (bytes_received / (stop - start)) * 8.0
 
     # adapt upload thread count dynamically based on download performance
@@ -131,55 +111,38 @@ def run_upload_test(
         requests.append((req, size))
 
     max_threads = threads or config["threads"]["upload"]
-    in_flight = {"threads": 0}
 
-    def producer(q: Queue, reqs: List[Tuple[Any, int]], req_count: int) -> None:
-        for i, request in enumerate(reqs[:req_count]):
-            thread = HTTPUploader(
-                i,
-                request[0],
-                start,
-                request[1],
-                config["length"]["upload"],
-                opener=opener,
-                shutdown_event=shutdown_event,
-            )
-            while in_flight["threads"] >= max_threads:
-                time.sleep(0.001)
+    # wrapper to execute the legacy thread payload
+    # TODO: modernize this
+    def _upload_task(i: int, request: Any, size: int, start_time: float) -> float:
+        callback(i, request_count, start=True)
+        task = HTTPUploader(
+            i,
+            request,
+            start_time,
+            size,
+            config["length"]["upload"],
+            opener=opener,
+            shutdown_event=shutdown_event,
+        )
+        task.run()
+        callback(i, request_count, end=True)
+        return task.result
 
-            thread.start()
-            q.put(thread, True)
-            in_flight["threads"] += 1
-            callback(i, req_count, start=True)
+    bytes_sent = 0.0
+    start = time.perf_counter()
 
-    finished: List[float] = []
+    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+        # old code explicitly sliced requests to req_count
+        futures = [
+            executor.submit(_upload_task, i, req, size, start)
+            for i, (req, size) in enumerate(requests[:request_count])
+        ]
 
-    def consumer(q: Queue, req_count: int) -> None:
-        while len(finished) < req_count:
-            thread = q.get(True)
-            while thread.is_alive():
-                thread.join(timeout=0.001)
+        for future in as_completed(futures):
+            bytes_sent += future.result()
 
-            in_flight["threads"] -= 1
-            finished.append(thread.result)
-            callback(thread.i, req_count, end=True)
-
-    q: Queue = Queue(max_threads)
-    prod_thread = threading.Thread(target=producer, args=(q, requests, request_count))
-    cons_thread = threading.Thread(target=consumer, args=(q, request_count))
-
-    start = timeit.default_timer()
-    prod_thread.start()
-    cons_thread.start()
-
-    while prod_thread.is_alive():
-        prod_thread.join(timeout=0.1)
-    while cons_thread.is_alive():
-        cons_thread.join(timeout=0.1)
-
-    stop = timeit.default_timer()
-
-    bytes_sent = sum(finished)
+    stop = time.perf_counter()
     upload_speed = (bytes_sent / (stop - start)) * 8.0
 
     return bytes_sent, upload_speed
