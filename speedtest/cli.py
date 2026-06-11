@@ -39,7 +39,7 @@ def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
 def csv_header(delimiter: str = ",") -> int:
     """Print the CSV Headers."""
 
-    print(SpeedtestResults.csv_header(delimiter=delimiter))
+    printer(SpeedtestResults.csv_header(delimiter=delimiter))
     return ExitStatus.SUCCESS
 
 
