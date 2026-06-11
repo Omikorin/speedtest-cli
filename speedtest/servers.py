@@ -134,6 +134,10 @@ def _ping_server(
 
     avg_latency = sum(latencies) / len(latencies)
     server["latency"] = avg_latency
+
+    # time.perf_counter() returns seconds in float
+    server["latency_ms"] = avg_latency * 1000.0
+
     return server, avg_latency
 
 
@@ -172,7 +176,7 @@ def get_best_server(
 
     printer(
         f"Best server selected: {best_server.get('sponsor')} "
-        f"({best_server.get('name')}) with latency {lowest_latency:.4f}s",
+        f"({best_server.get('name')}) with latency {best_server.get('latency_ms'):.4f} ms",
         debug=True,
     )
 
