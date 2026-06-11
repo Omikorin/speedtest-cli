@@ -11,7 +11,7 @@ from speedtest.utils import printer
 
 def main() -> int:
     try:
-        from speedtest.cli import shell
+        from speedtest.cli.main import shell
 
         exit_status = shell()
 
