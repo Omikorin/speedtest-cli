@@ -134,12 +134,6 @@ def parse_args() -> argparse.Namespace:
         action="append",
         help="Specify a server ID to test against. Can be supplied multiple times",
     )
-    parser.add_argument(
-        "--exclude",
-        type=int,
-        action="append",
-        help="Exclude a server from selection. Can be supplied multiple times",
-    )
     parser.add_argument("--mini", help="URL of the Speedtest Mini server")
     parser.add_argument("--source", help="Source IP address to bind to")
     parser.add_argument(
