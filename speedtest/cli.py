@@ -36,13 +36,6 @@ def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
     return inner
 
 
-def version() -> int:
-    """Print the version."""
-
-    print(f"speedtest-cli-ng {__version__}")
-    return ExitStatus.SUCCESS
-
-
 def csv_header(delimiter: str = ",") -> int:
     """Print the CSV Headers."""
 
@@ -60,7 +53,9 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser = argparse.ArgumentParser(
-        description=description, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        prog="speedtest-cli",
+        description=description,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -71,18 +66,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--no-download",
-        dest="download",
-        default=True,
-        action="store_const",
-        const=False,
+        dest="no_download",
+        action="store_true",
         help="Do not perform download test",
     )
     parser.add_argument(
         "--no-upload",
-        dest="upload",
-        default=True,
-        action="store_const",
-        const=False,
+        dest="no_upload",
+        action="store_true",
         help="Do not perform upload test",
     )
     parser.add_argument(
@@ -101,13 +92,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--simple",
         action="store_true",
-        default=False,
         help="Suppress verbose output, only show basic information",
     )
     parser.add_argument(
         "--csv",
         action="store_true",
-        default=False,
         help="Suppress verbose output, only show basic information in CSV format. Speeds listed in bit/s.",
     )
     parser.add_argument(
@@ -116,13 +105,10 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="Single character delimiter to use in CSV output.",
     )
-    parser.add_argument(
-        "--csv-header", action="store_true", default=False, help="Print CSV headers"
-    )
+    parser.add_argument("--csv-header", action="store_true", help="Print CSV headers")
     parser.add_argument(
         "--json",
         action="store_true",
-        default=False,
         help="Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s.",
     )
     parser.add_argument(
@@ -132,8 +118,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--server",
-        type=int,
         action="append",
+        type=int,
         help="Specify a server ID to test against. Can be supplied multiple times.",
     )
     parser.add_argument("--source", help="Source IP address to bind to")
@@ -147,14 +133,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--no-pre-allocate",
-        dest="pre_allocate",
-        action="store_const",
-        default=True,
-        const=False,
+        dest="no_pre_allocate",
+        action="store_true",
         help="Do not pre-allocate upload data. Disable to avoid MemoryErrors on low-memory systems.",
     )
     parser.add_argument(
-        "--version", action="store_true", help="Show the program version"
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     parser.add_argument(
         "--debug", action="store_true", default=False, help="Show debugging output"
@@ -185,10 +169,7 @@ def shell() -> int:
 
     args = parse_args()
 
-    if args.version:
-        return version()
-
-    if not args.download and not args.upload:
+    if args.no_download and args.no_upload:
         raise SpeedtestCLIError("Cannot supply both --no-download and --no-upload")
 
     if len(args.csv_delimiter) != 1:
@@ -273,25 +254,25 @@ def shell() -> int:
         quiet,
     )
 
-    if args.download:
+    if args.no_download:
+        printer("Skipping download test", quiet)
+    else:
         printer("Testing download speed", quiet, end="\n" if args.debug else "")
         st.download(callback=callback, threads=1 if args.single else None)
         download_speed = (results.download / 1_000_000) / args.units[1]
         printer(f"Download: {download_speed:.2f} M{args.units[0]}/s", quiet)
-    else:
-        printer("Skipping download test", quiet)
 
-    if args.upload:
+    if args.no_upload:
+        printer("Skipping upload test", quiet)
+    else:
         printer("Testing upload speed", quiet, end="\n" if args.debug else "")
         st.upload(
             callback=callback,
-            pre_allocate=args.pre_allocate,
+            pre_allocate=not args.no_pre_allocate,
             threads=1 if args.single else None,
         )
         upload_speed = (results.upload / 1_000_000) / args.units[1]
         printer(f"Upload: {upload_speed:.2f} M{args.units[0]}/s", quiet)
-    else:
-        printer("Skipping upload test", quiet)
 
     printer(f"Results:\n{results.dict()!r}", debug=True)
 
