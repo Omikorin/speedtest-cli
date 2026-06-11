@@ -26,14 +26,6 @@ def distance(origin: tuple[float, float], destination: tuple[float, float]) -> f
     return radius * c
 
 
-def get_attributes_by_tag_name(dom: Any, tag_name: str) -> dict[str, str]:
-    """Retrieve an attribute from an XML document and return it in a consistent format."""
-
-    elem = dom.getElementsByTagName(tag_name)[0]
-
-    return dict(elem.attributes.items())
-
-
 def print_dots(
     shutdown_event: threading.Event,
 ) -> Callable[[int, int, bool, bool], None]:
