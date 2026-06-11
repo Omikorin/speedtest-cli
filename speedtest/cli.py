@@ -134,7 +134,6 @@ def parse_args() -> argparse.Namespace:
         action="append",
         help="Specify a server ID to test against. Can be supplied multiple times",
     )
-    parser.add_argument("--mini", help="URL of the Speedtest Mini server")
     parser.add_argument("--source", help="Source IP address to bind to")
     parser.add_argument(
         "--timeout", default=10, type=float, help="HTTP timeout in seconds. Default 10"
@@ -239,31 +238,27 @@ def shell() -> int:
         quiet,
     )
 
-    if not args.mini:
-        printer("Retrieving speedtest.net server list...", quiet)
-        try:
-            st.get_servers(servers=args.server)
-        except NoMatchedServers:
-            servers_list = ", ".join(str(s) for s in args.server)
-            raise SpeedtestCLIError(f"No matched servers: {servers_list}")
-        except (*HTTP_ERRORS, ServersRetrievalError) as e:
-            printer("Cannot retrieve speedtest server list", error=True)
-            raise SpeedtestCLIError(e) from e
-        except InvalidServerIDType:
-            servers_list = ", ".join(str(s) for s in args.server)
-            raise SpeedtestCLIError(
-                f"{servers_list} is an invalid server type, must be an int"
-            )
+    printer("Retrieving speedtest.net server list...", quiet)
+    try:
+        st.get_servers(servers=args.server)
+    except NoMatchedServers:
+        servers_list = ", ".join(str(s) for s in args.server)
+        raise SpeedtestCLIError(f"No matched servers: {servers_list}")
+    except (*HTTP_ERRORS, ServersRetrievalError) as e:
+        printer("Cannot retrieve speedtest server list", error=True)
+        raise SpeedtestCLIError(e) from e
+    except InvalidServerIDType:
+        servers_list = ", ".join(str(s) for s in args.server)
+        raise SpeedtestCLIError(
+            f"{servers_list} is an invalid server type, must be an int"
+        )
 
-        if args.server and len(args.server) == 1:
-            printer("Retrieving information for the selected server...", quiet)
-        else:
-            printer("Selecting best server based on ping...", quiet)
+    if args.server and len(args.server) == 1:
+        printer("Retrieving information for the selected server...", quiet)
+    else:
+        printer("Selecting best server based on ping...", quiet)
 
-        st.get_best_server()
-    # elif args.mini:
-    #    st.get_best_server(st.set_mini_server(args.mini))
-
+    st.get_best_server()
     results = st.results
 
     printer(

@@ -16,10 +16,6 @@ except ImportError:
     GZIP_BASE = object
 
 from speedtest.config import fetch_config
-from speedtest.exceptions import (
-    InvalidSpeedtestMiniServer,
-    SpeedtestMiniConnectFailure,
-)
 from speedtest.http import (
     FakeShutdownEvent,
     HTTPDownloader,
@@ -101,55 +97,6 @@ class Speedtest:
             self.closest = [s for s in self.closest if int(s["id"]) in servers]
 
         return self.servers
-
-    def set_mini_server(self, server: str) -> List[Dict[str, Any]]:
-        """Set a link to a speedtest mini server instead of querying a list."""
-
-        urlparts = urlparse(server)
-        name, ext = os.path.splitext(urlparts.path)
-
-        url = os.path.dirname(server) if ext else server
-
-        request = build_request(url)
-        uh, e = catch_request(request, opener=self._opener)
-        if e:
-            raise SpeedtestMiniConnectFailure(f"Failed to connect to {server}")
-
-        text = uh.read()
-        uh.close()
-
-        extension = re.findall(
-            r'upload_?[Ee]xtension: "([^"]+)"', text.decode(errors="ignore")
-        )
-        if not extension:
-            for ext_type in ["php", "asp", "aspx", "jsp"]:
-                try:
-                    f = self._opener.open(f"{url}/speedtest/upload.{ext_type}")
-                    data = f.read().strip().decode(errors="ignore")
-                    if (
-                        f.code == 200
-                        and len(data.splitlines()) == 1
-                        and re.match(r"size=[0-9]", data)
-                    ):
-                        extension = [ext_type]
-                        break
-                except Exception:
-                    pass
-
-        if not urlparts or not extension:
-            raise InvalidSpeedtestMiniServer(f"Invalid Speedtest Mini Server: {server}")
-
-        mini_server = {
-            "sponsor": "Speedtest Mini",
-            "name": urlparts.netloc,
-            "d": 0,
-            "url": f"{url.rstrip('/')}/speedtest/upload.{extension[0]}",
-            "latency": 0,
-            "id": 0,
-        }
-
-        self.servers = [mini_server]  # type: ignore
-        return self.servers  # type: ignore
 
     def get_best_server(self, limit: int = 5) -> Dict[str, Any]:
         """Determine the best server by pinging the top `limit` closest servers."""
