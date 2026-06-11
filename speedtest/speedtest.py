@@ -1,9 +1,14 @@
-import os
-import threading
-import time
-import timeit
-from queue import Queue
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
+
+from speedtest.config import fetch_config
+from speedtest.http import (
+    FakeShutdownEvent,
+    build_opener,
+)
+from speedtest.results import SpeedtestResults
+from speedtest.servers import fetch_servers, get_best_server
+from speedtest.transfer import run_download_test, run_upload_test
+from speedtest.utils import do_nothing
 
 try:
     import gzip
@@ -12,19 +17,6 @@ try:
 except ImportError:
     gzip = None
     GZIP_BASE = object
-
-from speedtest.config import fetch_config
-from speedtest.http import (
-    FakeShutdownEvent,
-    HTTPDownloader,
-    HTTPUploader,
-    HTTPUploaderData,
-    build_opener,
-    build_request,
-)
-from speedtest.results import SpeedtestResults
-from speedtest.servers import fetch_servers, get_best_server
-from speedtest.utils import do_nothing
 
 
 class Speedtest:
@@ -114,72 +106,18 @@ class Speedtest:
     ) -> float:
         """Test download speed against speedtest.net."""
 
-        urls = []
-        base_url = os.path.dirname(self.best["url"])
-
-        for size in self.config["sizes"]["download"]:
-            for _ in range(self.config["counts"]["download"]):
-                urls.append(f"{base_url}/random{size}x{size}.jpg")
-
-        request_count = len(urls)
-        requests = [
-            build_request(url, bump=i, secure=self._secure)
-            for i, url in enumerate(urls)
-        ]
-        max_threads = threads or self.config["threads"]["download"]
-        in_flight = {"threads": 0}
-
-        def producer(q: Queue, reqs: List[Any], req_count: int) -> None:
-            for i, request in enumerate(reqs):
-                thread = HTTPDownloader(
-                    i,
-                    request,
-                    start,
-                    self.config["length"]["download"],
-                    opener=self._opener,
-                    shutdown_event=self._shutdown_event,
-                )
-                while in_flight["threads"] >= max_threads:
-                    time.sleep(0.001)
-
-                thread.start()
-                q.put(thread, True)
-                in_flight["threads"] += 1
-                callback(i, req_count, start=True)
-
-        finished: List[float] = []
-
-        def consumer(q: Queue, req_count: int) -> None:
-            while len(finished) < req_count:
-                thread = q.get(True)
-                while thread.is_alive():
-                    thread.join(timeout=0.001)
-
-                in_flight["threads"] -= 1
-                finished.append(sum(thread.result))
-                callback(thread.i, req_count, end=True)
-
-        q: Queue = Queue(max_threads)
-        prod_thread = threading.Thread(
-            target=producer, args=(q, requests, request_count)
+        bytes_received, download_speed = run_download_test(
+            best_server_url=self.best["url"],
+            config=self.config,
+            opener=self._opener,
+            secure=self._secure,
+            shutdown_event=self._shutdown_event,
+            callback=callback,
+            threads=threads,
         )
-        cons_thread = threading.Thread(target=consumer, args=(q, request_count))
 
-        start = timeit.default_timer()
-        prod_thread.start()
-        cons_thread.start()
-
-        while prod_thread.is_alive():
-            prod_thread.join(timeout=0.001)
-        while cons_thread.is_alive():
-            cons_thread.join(timeout=0.001)
-
-        stop = timeit.default_timer()
-        self.results.bytes_received = sum(finished)
-        self.results.download = (self.results.bytes_received / (stop - start)) * 8.0
-
-        if self.results.download > 100000:
-            self.config["threads"]["upload"] = 8
+        self.results.bytes_received = bytes_received
+        self.results.download = download_speed
 
         return self.results.download
 
@@ -191,83 +129,18 @@ class Speedtest:
     ) -> float:
         """Test upload speed against speedtest.net."""
 
-        sizes = [
-            size
-            for size in self.config["sizes"]["upload"]
-            for _ in range(self.config["counts"]["upload"])
-        ]
-
-        request_count = self.config["upload_max"]
-        requests = []
-
-        for i, size in enumerate(sizes):
-            # We set ``0`` for ``start`` and handle setting the actual
-            # ``start`` in ``HTTPUploader`` to get better measurements
-            data = HTTPUploaderData(
-                size,
-                0,
-                self.config["length"]["upload"],
-                shutdown_event=self._shutdown_event,
-            )
-            if pre_allocate:
-                data.pre_allocate()
-
-            headers = {"Content-length": str(size)}
-            req = build_request(
-                self.best["url"], data, secure=self._secure, headers=headers
-            )
-            requests.append((req, size))
-
-        max_threads = threads or self.config["threads"]["upload"]
-        in_flight = {"threads": 0}
-
-        def producer(q: Queue, reqs: List[Tuple[Any, int]], req_count: int) -> None:
-            for i, request in enumerate(reqs[:req_count]):
-                thread = HTTPUploader(
-                    i,
-                    request[0],
-                    start,
-                    request[1],
-                    self.config["length"]["upload"],
-                    opener=self._opener,
-                    shutdown_event=self._shutdown_event,
-                )
-                while in_flight["threads"] >= max_threads:
-                    time.sleep(0.001)
-
-                thread.start()
-                q.put(thread, True)
-                in_flight["threads"] += 1
-                callback(i, req_count, start=True)
-
-        finished: List[float] = []
-
-        def consumer(q: Queue, req_count: int) -> None:
-            while len(finished) < req_count:
-                thread = q.get(True)
-                while thread.is_alive():
-                    thread.join(timeout=0.001)
-
-                in_flight["threads"] -= 1
-                finished.append(thread.result)
-                callback(thread.i, req_count, end=True)
-
-        q: Queue = Queue(max_threads)
-        prod_thread = threading.Thread(
-            target=producer, args=(q, requests, request_count)
+        bytes_sent, upload_speed = run_upload_test(
+            best_server_url=self.best["url"],
+            config=self.config,
+            opener=self._opener,
+            secure=self._secure,
+            shutdown_event=self._shutdown_event,
+            callback=callback,
+            pre_allocate=pre_allocate,
+            threads=threads,
         )
-        cons_thread = threading.Thread(target=consumer, args=(q, request_count))
 
-        start = timeit.default_timer()
-        prod_thread.start()
-        cons_thread.start()
+        self.results.bytes_sent = bytes_sent
+        self.results.upload = upload_speed
 
-        while prod_thread.is_alive():
-            prod_thread.join(timeout=0.1)
-        while cons_thread.is_alive():
-            cons_thread.join(timeout=0.1)
-
-        stop = timeit.default_timer()
-        self.results.bytes_sent = sum(finished)
-        self.results.upload = (self.results.bytes_sent / (stop - start)) * 8.0
         return self.results.upload
