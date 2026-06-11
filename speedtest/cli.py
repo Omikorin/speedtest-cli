@@ -9,6 +9,7 @@ import threading
 from http.client import HTTPSConnection
 from typing import Any, Callable
 
+import speedtest.utils
 from speedtest import __version__
 from speedtest.exceptions import (
     ConfigRetrievalError,
@@ -196,6 +197,9 @@ def shell() -> int:
         return csv_header(args.csv_delimiter)
 
     validate_optional_args(args)
+
+    if args.debug:
+        speedtest.utils.DEBUG = True
 
     quiet = bool(args.simple or args.csv or args.json)
     machine_format = bool(args.csv or args.json)
