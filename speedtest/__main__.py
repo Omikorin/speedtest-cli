@@ -6,6 +6,7 @@ import sys
 
 from speedtest.exceptions import SpeedtestException
 from speedtest.status import ExitStatus
+from speedtest.utils import printer
 
 
 def main() -> int:
@@ -15,7 +16,7 @@ def main() -> int:
         exit_status = shell()
 
     except KeyboardInterrupt:
-        print("Stopped by user", file=sys.stderr)
+        printer("Stopped by user", error=True)
         exit_status = ExitStatus.ERROR_CTRL_C
 
     except SpeedtestException as e:
