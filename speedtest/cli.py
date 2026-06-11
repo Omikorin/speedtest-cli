@@ -5,7 +5,6 @@ Command line interface parser.
 import argparse
 import errno
 import signal
-import sys
 import threading
 from http.client import HTTPSConnection
 from typing import Any, Callable
@@ -249,7 +248,7 @@ def shell() -> int:
     if not args.mini:
         printer("Retrieving speedtest.net server list...", quiet)
         try:
-            st.get_servers(servers=args.server, exclude=args.exclude)
+            st.get_servers(servers=args.server)
         except NoMatchedServers:
             servers_list = ", ".join(str(s) for s in args.server)
             raise SpeedtestCLIError(f"No matched servers: {servers_list}")
@@ -268,8 +267,8 @@ def shell() -> int:
             printer("Selecting best server based on ping...", quiet)
 
         st.get_best_server()
-    elif args.mini:
-        st.get_best_server(st.set_mini_server(args.mini))
+    # elif args.mini:
+    #    st.get_best_server(st.set_mini_server(args.mini))
 
     results = st.results
 
