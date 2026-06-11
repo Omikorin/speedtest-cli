@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 import speedtest.utils
 from speedtest import __version__
+from speedtest.core import Speedtest
 from speedtest.exceptions import (
     ConfigRetrievalError,
     InvalidServerIDType,
@@ -20,7 +21,6 @@ from speedtest.exceptions import (
 )
 from speedtest.http import HTTP_ERRORS
 from speedtest.results import SpeedtestResults
-from speedtest.speedtest import Speedtest
 from speedtest.status import ExitStatus
 from speedtest.utils import do_nothing, print_dots, printer
 
