@@ -1,8 +1,9 @@
+import threading
 from typing import Any, Callable, Dict, List, Optional
 
 from speedtest.config import fetch_config
 from speedtest.exceptions import NoMatchedServers
-from speedtest.http import FakeShutdownEvent, build_opener
+from speedtest.http import build_opener
 from speedtest.results import SpeedtestResults
 from speedtest.servers import fetch_servers, get_best_server
 from speedtest.transfer import run_download_test, run_upload_test
@@ -25,7 +26,7 @@ class Speedtest:
         self._source_address = source_address
         self._timeout = timeout
         self._secure = secure
-        self._shutdown_event = shutdown_event or FakeShutdownEvent()
+        self._shutdown_event = shutdown_event or threading.Event()
 
         self._opener = build_opener(source_address, timeout)
 
