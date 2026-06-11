@@ -1,12 +1,10 @@
-import math
 import os
 import re
 import threading
 import time
 import timeit
-import xml.etree.ElementTree as ET
 from queue import Queue
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 try:
@@ -19,32 +17,21 @@ except ImportError:
 
 from speedtest.config import fetch_config
 from speedtest.exceptions import (
-    ConfigRetrievalError,
-    InvalidServerIDType,
     InvalidSpeedtestMiniServer,
-    NoMatchedServers,
-    ServersRetrievalError,
-    SpeedtestBestServerFailure,
-    SpeedtestConfigError,
     SpeedtestMiniConnectFailure,
-    SpeedtestServersError,
 )
 from speedtest.http import (
-    HTTP_ERRORS,
     FakeShutdownEvent,
     HTTPDownloader,
     HTTPUploader,
     HTTPUploaderData,
-    SpeedtestHTTPConnection,
-    SpeedtestHTTPSConnection,
     build_opener,
     build_request,
-    build_user_agent,
     catch_request,
-    get_response_stream,
 )
 from speedtest.results import SpeedtestResults
-from speedtest.utils import distance, do_nothing, printer
+from speedtest.servers import fetch_servers, get_best_server
+from speedtest.utils import do_nothing
 
 
 class Speedtest:
@@ -90,110 +77,28 @@ class Speedtest:
         return self._best
 
     def get_servers(
-        self, servers: Optional[List[int]] = None, exclude: Optional[List[int]] = None
+        self, servers: Optional[List[int]] = None
     ) -> Dict[float, List[Dict[str, Any]]]:
-        """Retrieve the list of speedtest.net servers, optionally filtered."""
-        servers = servers or []
-        exclude = exclude or []
-        self.servers.clear()
+        """Fetch and set the server list based on distance."""
 
-        # validate provided lists
-        for server_list in (servers, exclude):
-            for i, s in enumerate(server_list):
-                try:
-                    server_list[i] = int(s)
-                except ValueError:
-                    raise InvalidServerIDType(
-                        f"{s} is an invalid server type, must be int"
-                    )
+        ignore = self.config.get("ignore_servers", [])
 
-        urls = [
-            "://www.speedtest.net/speedtest-servers-static.php",
-            "http://c.speedtest.net/speedtest-servers-static.php",
-            "://www.speedtest.net/speedtest-servers.php",
-            "http://c.speedtest.net/speedtest-servers.php",
-        ]
+        self.servers = fetch_servers(
+            opener=self._opener,
+            lat_lon=self.lat_lon,
+            ignore_servers=ignore,
+            secure=self._secure,
+        )
 
-        headers = {"Accept-Encoding": "gzip"} if gzip else {}
-        errors = []
+        sorted_distances = sorted(self.servers.keys())
+        self.closest = []
+        for d in sorted_distances:
+            for s in self.servers[d]:
+                self.closest.append(s)
 
-        for url in urls:
-            try:
-                thread_count = self.config.get("threads", {}).get("download", 8)
-                request = build_request(
-                    f"{url}?threads={thread_count}",
-                    headers=headers,
-                    secure=self._secure,
-                )
-
-                uh, e = catch_request(request, opener=self._opener)
-                if e:
-                    errors.append(str(e))
-                    raise ServersRetrievalError()
-
-                stream = get_response_stream(uh)
-                serversxml_list: List[bytes] = []
-
-                while True:
-                    try:
-                        chunk = stream.read(1024)
-                        serversxml_list.append(chunk)
-                    except (OSError, EOFError) as err:
-                        raise ServersRetrievalError(err) from err
-                    if not chunk:
-                        break
-
-                stream.close()
-                uh.close()
-
-                if int(uh.code) != 200:
-                    raise ServersRetrievalError()
-
-                serversxml = b"".join(serversxml_list)
-                printer(
-                    f"Servers XML:\n{serversxml.decode(errors='ignore')}", debug=True
-                )
-
-                try:
-                    root = ET.fromstring(serversxml)
-                    elements = root.iter("server")
-                except ET.ParseError as err:
-                    raise SpeedtestServersError(
-                        f"Malformed speedtest.net server list: {err}"
-                    )
-
-                for server in elements:
-                    attrib = server.attrib
-                    server_id = int(attrib.get("id", 0))
-
-                    if servers and server_id not in servers:
-                        continue
-
-                    if (
-                        server_id in self.config.get("ignore_servers", [])
-                        or server_id in exclude
-                    ):
-                        continue
-
-                    try:
-                        d = distance(
-                            self.lat_lon,
-                            (float(attrib.get("lat", 0)), float(attrib.get("lon", 0))),
-                        )
-                    except (ValueError, TypeError):
-                        continue
-
-                    attrib["d"] = d
-                    self.servers.setdefault(d, []).append(attrib)
-
-                break  # successful fetch, break out of URL loop
-            # TODO: simplify
-
-            except ServersRetrievalError:
-                continue
-
-        if (servers or exclude) and not self.servers:
-            raise NoMatchedServers()
+        # optionally, filter by specific server IDs if requested
+        if servers:
+            self.closest = [s for s in self.closest if int(s["id"]) in servers]
 
         return self.servers
 
@@ -246,105 +151,19 @@ class Speedtest:
         self.servers = [mini_server]  # type: ignore
         return self.servers  # type: ignore
 
-    def get_closest_servers(self, limit: int = 5) -> List[Dict[str, Any]]:
-        """Limit servers to the closest ones based on geographic distance."""
+    def get_best_server(self, limit: int = 5) -> Dict[str, Any]:
+        """Determine the best server by pinging the top `limit` closest servers."""
 
-        if not self.servers:
+        if not self.closest:
             self.get_servers()
 
-        self.closest.clear()
+        # only ping the top N closest servers to save time
+        candidates = self.closest[:limit]
 
-        for d in sorted(self.servers.keys()):
-            for s in self.servers[d]:
-                self.closest.append(s)
-                if len(self.closest) == limit:
-                    break
-            else:
-                continue
-            break
+        self._best = get_best_server(candidates, self._opener)
+        self.results.server = self._best
 
-        printer(f"Closest Servers:\n{self.closest}", debug=True)
-        return self.closest
-
-    def get_best_server(
-        self, servers: Optional[List[Dict[str, Any]]] = None
-    ) -> Dict[str, Any]:
-        """Perform a ping to determine which server has the lowest latency."""
-
-        if not servers:
-            if not self.closest:
-                self.get_closest_servers()
-            servers = self.closest
-
-        source_address_tuple = (
-            (self._source_address, 0) if self._source_address else None
-        )
-        user_agent = build_user_agent()
-        results: Dict[float, Dict[str, Any]] = {}
-
-        for server in servers:
-            cum: List[float] = []
-            url = os.path.dirname(server.get("url", ""))
-            stamp = int(time.time() * 1000)
-            latency_url = f"{url}/latency.txt?x={stamp}"
-
-            for i in range(3):
-                this_latency_url = f"{latency_url}.{i}"
-                printer(f"GET {this_latency_url}", debug=True)
-                urlparts = urlparse(latency_url)
-
-                try:
-                    if urlparts.scheme == "https":
-                        h = SpeedtestHTTPSConnection(
-                            urlparts.netloc, source_address=source_address_tuple
-                        )
-                    else:
-                        h = SpeedtestHTTPConnection(
-                            urlparts.netloc, source_address=source_address_tuple
-                        )
-
-                    headers = {"User-Agent": user_agent}
-                    path = (
-                        f"{urlparts.path}?{urlparts.query}"
-                        if urlparts.query
-                        else urlparts.path
-                    )
-
-                    start = timeit.default_timer()
-                    h.request("GET", path, headers=headers)
-                    r = h.getresponse()
-                    total = timeit.default_timer() - start
-                except HTTP_ERRORS as e:
-                    printer(f"ERROR: {e!r}", debug=True)
-                    cum.append(3600.0)
-                    continue
-
-                text = r.read(9)
-                if int(r.status) == 200 and text == b"test=test":
-                    cum.append(total)
-                else:
-                    cum.append(3600.0)
-                h.close()
-
-            avg = round((sum(cum) / 6) * 1000.0, 3)
-            results[avg] = server
-
-        try:
-            fastest = sorted(results.keys())[0]
-        except IndexError:
-            raise SpeedtestBestServerFailure(
-                "Unable to connect to servers to test latency."
-            )
-
-        best = results[fastest]
-        best["latency"] = fastest
-
-        self.results.ping = fastest
-        self.results.server = best
-        self._best.update(best)
-
-        printer(f"Best Server:\n{best}", debug=True)
-        return best
+        return self._best
 
     def download(
         self, callback: Callable = do_nothing, threads: Optional[int] = None
