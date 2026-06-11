@@ -12,8 +12,6 @@ __all__ = [
     "ServersRetrievalError",
     "InvalidServerIDType",
     "NoMatchedServers",
-    "SpeedtestMiniConnectFailure",
-    "InvalidSpeedtestMiniServer",
     "ShareResultsConnectFailure",
     "ShareResultsSubmitFailure",
     "SpeedtestUploadTimeout",
@@ -56,17 +54,6 @@ class InvalidServerIDType(SpeedtestException):
 
 class NoMatchedServers(SpeedtestException):
     """No servers matched when filtering."""
-
-
-class SpeedtestMiniConnectFailure(SpeedtestException):
-    """Could not connect to the provided speedtest mini server."""
-
-
-class InvalidSpeedtestMiniServer(SpeedtestException):
-    """
-    Server provided as a speedtest mini server does not actually appear
-    to be a speedtest mini server.
-    """
 
 
 class ShareResultsConnectFailure(SpeedtestException):
