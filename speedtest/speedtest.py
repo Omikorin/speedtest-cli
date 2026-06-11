@@ -98,7 +98,7 @@ class Speedtest:
 
         uh, e = catch_request(request, opener=self._opener)
         if e:
-            raise ConfigRetrievalError(e)
+            raise ConfigRetrievalError(e) from e
 
         configxml_list: List[bytes] = []
         stream = get_response_stream(uh)
