@@ -3,15 +3,18 @@ import json
 from datetime import datetime, timezone
 from hashlib import md5
 from io import StringIO
-from typing import Any, Optional
-from urllib.parse import parse_qs
+from typing import Any, Dict, Optional
+from urllib.parse import parse_qs, urlencode
 
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
 from speedtest.http import build_opener, build_request, catch_request
 
+__all__ = ["SpeedtestResults"]
+
 
 class SpeedtestResults:
-    """Class for holding the results of a speedtest, including:
+    """
+    Class for holding the results of a speedtest, including:
 
     * Download speed
     * Upload speed
@@ -28,8 +31,8 @@ class SpeedtestResults:
         download: float = 0.0,
         upload: float = 0.0,
         ping: float = 0.0,
-        server: Optional[dict[str, Any]] = None,
-        client: Optional[dict[str, str]] = None,
+        server: Optional[Dict[str, Any]] = None,
+        client: Optional[Dict[str, str]] = None,
         opener: Any = None,
         secure: bool = False,
     ):
@@ -41,8 +44,11 @@ class SpeedtestResults:
 
         self._share: Optional[str] = None
 
+        # generate a clean ISO 8601 UTC timestamp
         self.timestamp = (
-            f"{datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}Z"
+            datetime.now(timezone.utc)
+            .isoformat(timespec="microseconds")
+            .replace("+00:00", "Z")
         )
 
         self.bytes_received = 0
@@ -67,31 +73,32 @@ class SpeedtestResults:
         hash_str = f"{ping}-{upload}-{download}-297aae72"
         hash_val = md5(hash_str.encode()).hexdigest()
 
-        # Build the request to send results back to speedtest.net.
-        # We use a list instead of a dict because the API expects parameters
-        # in a strict sequential order.
-        api_data = [
-            f"recommendedserverid={self.server.get('id', '')}",
-            f"ping={ping}",
-            "screenresolution=",
-            "promo=",
-            f"download={download}",
-            "screendpi=",
-            f"upload={upload}",
-            "testmethod=http",
-            f"hash={hash_val}",
-            "touchscreen=none",
-            "startmode=pingselect",
-            "accuracy=1",
-            f"bytesreceived={self.bytes_received}",
-            f"bytessent={self.bytes_sent}",
-            f"serverid={self.server.get('id', '')}",
+        # We use a list of tuples instead of a dict because the speedtest API
+        # expects parameters in a strict sequential order. urlencode preserves this.
+        api_parameters = [
+            ("recommendedserverid", self.server.get("id", "")),
+            ("ping", ping),
+            ("screenresolution", ""),
+            ("promo", ""),
+            ("download", download),
+            ("screendpi", ""),
+            ("upload", upload),
+            ("testmethod", "http"),
+            ("hash", hash_val),
+            ("touchscreen", "none"),
+            ("startmode", "pingselect"),
+            ("accuracy", 1),
+            ("bytesreceived", self.bytes_received),
+            ("bytessent", self.bytes_sent),
+            ("serverid", self.server.get("id", "")),
         ]
 
+        api_data = urlencode(api_parameters).encode()
         headers = {"Referer": "http://c.speedtest.net/flash/speedtest.swf"}
+
         request = build_request(
             "://www.speedtest.net/api/api.php",
-            data="&".join(api_data).encode(),
+            data=api_data,
             headers=headers,
             secure=self._secure,
         )
@@ -101,24 +108,27 @@ class SpeedtestResults:
             raise ShareResultsConnectFailure(e)
 
         try:
+            # capture code before reading to avoid UnboundLocalError
+            code = int(f.code)
             response = f.read()
-            code = f.code
         finally:
             f.close()
 
-        if int(code) != 200:
-            raise ShareResultsSubmitFailure("Could not submit results to speedtest.net")
+        if code != 200:
+            raise ShareResultsSubmitFailure(f"Could not submit results. HTTP {code}")
 
         qsargs = parse_qs(response.decode())
         resultid = qsargs.get("resultid")
 
         if not resultid or len(resultid) != 1:
-            raise ShareResultsSubmitFailure("Could not submit results to speedtest.net")
+            raise ShareResultsSubmitFailure(
+                "Could not parse result ID from API response"
+            )
 
         self._share = f"https://www.speedtest.net/result/{resultid[0]}.png"
         return self._share
 
-    def dict(self) -> dict[str, Any]:
+    def dict(self) -> Dict[str, Any]:
         """Return dictionary of result data."""
 
         return {
@@ -161,8 +171,6 @@ class SpeedtestResults:
         """Return data in CSV format."""
 
         data = self.dict()
-        out = StringIO()
-        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
 
         row = [
             data["server"].get("id", ""),
@@ -177,11 +185,14 @@ class SpeedtestResults:
             self.client.get("ip", ""),
         ]
 
+        out = StringIO()
+        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
         writer.writerow(row)
+
         return out.getvalue()
 
     def json(self, pretty: bool = False) -> str:
         """Return data in JSON format."""
 
-        kwargs: dict[str, Any] = {"indent": 4, "sort_keys": True} if pretty else {}
+        kwargs: Dict[str, Any] = {"indent": 4, "sort_keys": True} if pretty else {}
         return json.dumps(self.dict(), **kwargs)
