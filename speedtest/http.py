@@ -1,12 +1,13 @@
 import gzip
 import platform
+import shutil
 import socket
 import ssl
 import threading
 import timeit
 from http.client import BadStatusLine, HTTPConnection, HTTPSConnection
 from io import BytesIO
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import (
     AbstractHTTPHandler,
@@ -26,19 +27,7 @@ from speedtest.exceptions import (
 )
 from speedtest.utils import printer
 
-
-class FakeShutdownEvent:
-    """Class to fake a threading.Event.is_set so that users of this module
-    are not required to register their own threading.Event()
-    """
-
-    @staticmethod
-    def is_set() -> bool:
-        """Dummy method to always return false."""
-        return False
-
-
-# Consolidating errors for modern Python (socket.error and IOError are now aliases for OSError)
+# Consolidating errors
 HTTP_ERRORS = (
     HTTPError,
     URLError,
@@ -48,6 +37,8 @@ HTTP_ERRORS = (
     ssl.CertificateError,
 )
 
+UPLOAD_ERRORS = HTTP_ERRORS + (SpeedtestUploadTimeout,)
+
 
 class SpeedtestHTTPConnection(HTTPConnection):
     """Custom HTTPConnection to support source_address routing."""
@@ -55,7 +46,7 @@ class SpeedtestHTTPConnection(HTTPConnection):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.source_address = kwargs.pop("source_address", None)
         self.timeout = kwargs.pop("timeout", 10)
-        self._tunnel_host: Optional[str] = None
+        self._tunnel_host: str | None = None
 
         super().__init__(*args, **kwargs)
 
@@ -78,7 +69,7 @@ class SpeedtestHTTPSConnection(HTTPSConnection):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.source_address = kwargs.pop("source_address", None)
         self.timeout = kwargs.pop("timeout", 10)
-        self._tunnel_host: Optional[str] = None
+        self._tunnel_host: str | None = None
 
         super().__init__(*args, **kwargs)
 
@@ -92,20 +83,18 @@ class SpeedtestHTTPSConnection(HTTPSConnection):
         if self._tunnel_host:
             self._tunnel()
 
-        kwargs = {}
-        if self._tunnel_host:
-            kwargs["server_hostname"] = self._tunnel_host
-        else:
-            kwargs["server_hostname"] = self.host
+        kwargs = {
+            "server_hostname": self._tunnel_host if self._tunnel_host else self.host
+        }
 
         self.sock = self._context.wrap_socket(self.sock, **kwargs)
 
 
 def _build_connection(
     connection: type,
-    source_address: Optional[tuple],
+    source_address: tuple[str, int] | None,
     timeout: float,
-    context: Optional[ssl.SSLContext] = None,
+    context: ssl.SSLContext | None = None,
 ) -> Callable:
     """Callable to build an ``HTTPConnection`` or ``HTTPSConnection``."""
 
@@ -124,7 +113,7 @@ class SpeedtestHTTPHandler(AbstractHTTPHandler):
     def __init__(
         self,
         debuglevel: int = 0,
-        source_address: Optional[tuple] = None,
+        source_address: tuple[str, int] | None = None,
         timeout: float = 10,
     ):
         super().__init__(debuglevel)
@@ -148,8 +137,8 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
     def __init__(
         self,
         debuglevel: int = 0,
-        context: Optional[ssl.SSLContext] = None,
-        source_address: Optional[tuple] = None,
+        context: ssl.SSLContext | None = None,
+        source_address: tuple[str, int] | None = None,
         timeout: float = 10,
     ):
         super().__init__(debuglevel)
@@ -172,7 +161,7 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
 
 
 def build_opener(
-    source_address: Optional[str] = None, timeout: float = 10
+    source_address: str | None = None, timeout: float = 10
 ) -> OpenerDirector:
     """Build an ``OpenerDirector`` with explicit handlers."""
 
@@ -205,12 +194,7 @@ class GzipDecodedResponse(gzip.GzipFile):
 
     def __init__(self, response: Any):
         self.io = BytesIO()
-        while True:
-            chunk = response.read(1024)
-            if not chunk:
-                break
-            self.io.write(chunk)
-
+        shutil.copyfileobj(response, self.io)
         self.io.seek(0)
         super().__init__(mode="rb", fileobj=self.io)
 
@@ -238,8 +222,8 @@ def build_user_agent() -> str:
 
 def build_request(
     url: str,
-    data: Optional[bytes] = None,
-    headers: Optional[dict] = None,
+    data: bytes | None = None,
+    headers: dict[str, str] | None = None,
     bump: str = "0",
     secure: bool = False,
 ) -> Request:
@@ -267,7 +251,7 @@ def build_request(
 
 
 def catch_request(
-    request: Request, opener: Optional[OpenerDirector] = None
+    request: Request, opener: OpenerDirector | None = None
 ) -> tuple[Any, Any]:
     """Helper function to catch common exceptions encountered during HTTP/HTTPS requests."""
 
@@ -300,8 +284,8 @@ class HTTPDownloader(threading.Thread):
         request: Request,
         start: float,
         timeout: float,
-        opener: Optional[OpenerDirector] = None,
-        shutdown_event: Optional[threading.Event] = None,
+        opener: OpenerDirector | None = None,
+        shutdown_event: threading.Event | None = None,
     ):
         super().__init__()
         self.request = request
@@ -310,7 +294,7 @@ class HTTPDownloader(threading.Thread):
         self.timeout = timeout
         self.i = i
         self._opener = opener.open if opener else urlopen
-        self._shutdown_event = shutdown_event or FakeShutdownEvent()
+        self._shutdown_event = shutdown_event or threading.Event()
 
     def run(self) -> None:
         try:
@@ -336,23 +320,22 @@ class HTTPUploaderData:
         length: int,
         start: float,
         timeout: float,
-        shutdown_event: Optional[threading.Event] = None,
+        shutdown_event: threading.Event | None = None,
     ):
         self.length = length
         self.start = start
         self.timeout = timeout
-        self._shutdown_event = shutdown_event or FakeShutdownEvent()
-        self._data: Optional[BytesIO] = None
+        self._shutdown_event = shutdown_event or threading.Event()
+        self._data: BytesIO | None = None
         self.total = [0]
 
     def pre_allocate(self) -> None:
         chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        multiplier = int(round(int(self.length) / 36.0))
+        multiplier = int(round(self.length / 36.0))
 
         try:
-            self._data = BytesIO(
-                f"content1={(chars * multiplier)[0 : int(self.length) - 9]}".encode()
-            )
+            payload = f"content1={(chars * multiplier)[:self.length - 9]}".encode()
+            self._data = BytesIO(payload)
         except MemoryError:
             raise SpeedtestCLIError(
                 "Insufficient memory to pre-allocate upload data. Please use --no-pre-allocate"
@@ -388,8 +371,8 @@ class HTTPUploader(threading.Thread):
         start: float,
         size: int,
         timeout: float,
-        opener: Optional[OpenerDirector] = None,
-        shutdown_event: Optional[threading.Event] = None,
+        opener: OpenerDirector | None = None,
+        shutdown_event: threading.Event | None = None,
     ):
         super().__init__()
         self.request = request
@@ -399,7 +382,7 @@ class HTTPUploader(threading.Thread):
         self.timeout = timeout
         self.i = i
         self._opener = opener.open if opener else urlopen
-        self._shutdown_event = shutdown_event or FakeShutdownEvent()
+        self._shutdown_event = shutdown_event or threading.Event()
 
     def run(self) -> None:
         request = self.request
@@ -413,6 +396,6 @@ class HTTPUploader(threading.Thread):
                 self.result = sum(self.request.data.total)  # type: ignore
             else:
                 self.result = 0
-        except (OSError, SpeedtestUploadTimeout, *HTTP_ERRORS):
+        except UPLOAD_ERRORS:
             # fallback to the amount of bytes we successfully managed to upload before the crash/timeout
             self.result = sum(self.request.data.total) if hasattr(self.request, "data") else 0  # type: ignore
