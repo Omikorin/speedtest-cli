@@ -1,7 +1,7 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from speedtest.http import HTTPDownloader, HTTPUploader, HTTPUploaderData, build_request
 from speedtest.utils import do_nothing
