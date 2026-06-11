@@ -2,6 +2,8 @@ import sys
 import threading
 from typing import Callable, Any
 
+DEBUG: bool = False
+
 
 def print_dots(
     shutdown_event: threading.Event,
@@ -34,7 +36,7 @@ def printer(
 ) -> None:
     """Helper function to print a string with various features."""
 
-    if debug:
+    if debug and not DEBUG:
         return
 
     if error:
