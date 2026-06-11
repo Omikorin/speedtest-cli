@@ -259,7 +259,7 @@ def shell() -> int:
 
     printer(
         f"Hosted by {results.server['sponsor']} ({results.server['name']}) "
-        f"[{results.server['d']:.2f} km]: {results.server['latency']} ms",
+        f"[{results.server['d']:.2f} km]: {results.server['latency_ms']:.4f} ms",
         quiet,
     )
 
@@ -292,7 +292,7 @@ def shell() -> int:
         download_speed = (results.download / 1_000_000) / args.units[1]
         upload_speed = (results.upload / 1_000_000) / args.units[1]
         printer(
-            f"Ping: {results.ping} ms\n"
+            f"Ping: {results.ping:.4f} ms\n"
             f"Download: {download_speed:.2f} M{args.units[0]}/s\n"
             f"Upload: {upload_speed:.2f} M{args.units[0]}/s"
         )
