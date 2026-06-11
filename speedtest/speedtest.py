@@ -1,11 +1,9 @@
 import os
-import re
 import threading
 import time
 import timeit
 from queue import Queue
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
 
 try:
     import gzip
@@ -23,7 +21,6 @@ from speedtest.http import (
     HTTPUploaderData,
     build_opener,
     build_request,
-    catch_request,
 )
 from speedtest.results import SpeedtestResults
 from speedtest.servers import fetch_servers, get_best_server
