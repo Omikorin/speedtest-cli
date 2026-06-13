@@ -4,9 +4,9 @@ import shutil
 import socket
 import ssl
 import threading
-import timeit
+import time
 from collections.abc import Callable
-from http.client import BadStatusLine, HTTPConnection, HTTPSConnection
+from http.client import BadStatusLine, HTTPConnection, HTTPResponse, HTTPSConnection
 from io import BytesIO
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -22,13 +22,15 @@ from urllib.request import (
 )
 
 from speedtest import __version__
-from speedtest.exceptions import (
-    SpeedtestCLIError,
-    SpeedtestUploadTimeout,
-)
+from speedtest.exceptions import SpeedtestCLIError, SpeedtestUploadTimeout
 from speedtest.logger import logger
 
-# Consolidating errors
+# --- Constants ---
+CHUNK_SIZE_BYTES = 10240
+PAYLOAD_MULTIPLIER = 36.0
+UPLOAD_RESPONSE_TRUNCATION = 11
+
+# Consolidating errors (OSError inherently covers socket.error and IOError)
 HTTP_ERRORS = (
     HTTPError,
     URLError,
@@ -75,7 +77,7 @@ class SpeedtestHTTPSConnection(HTTPSConnection):
         super().__init__(*args, **kwargs)
 
     def connect(self) -> None:
-        """Connect to a host on a given (SSL) port."""
+        """Connect to a host on a given SSL port."""
 
         self.sock = socket.create_connection(
             (self.host, self.port), self.timeout, self.source_address
@@ -234,7 +236,7 @@ def build_request(
     delim = "&" if "?" in url else "?"
 
     # Cache buster using current milliseconds
-    final_url = f"{url}{delim}x={int(timeit.time.time() * 1000)}.{bump}"
+    final_url = f"{url}{delim}x={int(time.time() * 1000)}.{bump}"
 
     headers["Cache-Control"] = "no-cache"
 
@@ -247,12 +249,13 @@ def build_request(
 def catch_request(
     request: Request, opener: OpenerDirector | None = None
 ) -> tuple[Any, Any]:
-    """Helper function to catch common exceptions encountered during HTTP/HTTPS requests."""
+    """Helper function to catch common exceptions encountered during HTTP[S] requests."""
 
     _open = opener.open if opener else urlopen
 
     try:
-        uh = _open(request)
+        uh: HTTPResponse = _open(request)
+
         if request.get_full_url() != uh.geturl():
             logger.debug(f"Redirected to {uh.geturl()}")
         return uh, False
@@ -260,7 +263,7 @@ def catch_request(
         return None, e
 
 
-def get_response_stream(response: Any) -> Any:
+def get_response_stream(response: HTTPResponse) -> HTTPResponse | GzipDecodedResponse:
     """Return a Gzip reader if ``Content-Encoding`` is ``gzip``, otherwise the response itself."""
 
     if response.getheader("content-encoding") == "gzip":
@@ -269,63 +272,58 @@ def get_response_stream(response: Any) -> Any:
     return response
 
 
-class HTTPDownloader(threading.Thread):
-    """Thread class for retrieving a URL."""
+def download_worker(
+    request: Request,
+    start_time: float,
+    timeout: float,
+    opener: OpenerDirector | None = None,
+    shutdown_event: threading.Event | None = None,
+) -> int:
+    """Worker function for retrieving a URL, returning total bytes downloaded."""
 
-    def __init__(
-        self,
-        i: int,
-        request: Request,
-        start: float,
-        timeout: float,
-        opener: OpenerDirector | None = None,
-        shutdown_event: threading.Event | None = None,
-    ):
-        super().__init__()
-        self.request = request
-        self.result = [0]
-        self.starttime = start
-        self.timeout = timeout
-        self.i = i
-        self._opener = opener.open if opener else urlopen
-        self._shutdown_event = shutdown_event or threading.Event()
+    _opener = opener.open if opener else urlopen
+    _shutdown_event = shutdown_event or threading.Event()
+    total_downloaded = 0
 
-    def run(self) -> None:
-        try:
-            if (timeit.default_timer() - self.starttime) <= self.timeout:
-                f = self._opener(self.request)
+    try:
+        if (time.monotonic() - start_time) <= timeout:
+            with _opener(request) as response:
                 while (
-                    not self._shutdown_event.is_set()
-                    and (timeit.default_timer() - self.starttime) <= self.timeout
+                    not _shutdown_event.is_set()
+                    and (time.monotonic() - start_time) <= timeout
                 ):
-                    self.result.append(len(f.read(10240)))
-                    if self.result[-1] == 0:
+                    chunk = response.read(CHUNK_SIZE_BYTES)
+                    if not chunk:
                         break
-                f.close()
-        except HTTP_ERRORS:
-            pass
+
+                    total_downloaded += len(chunk)
+    except HTTP_ERRORS:
+        pass
+
+    return total_downloaded
 
 
 class HTTPUploaderData:
-    """File-like object to improve cutting off the upload once the timeout is reached."""
+    """File-like object to cleanly truncate the upload once the timeout is reached."""
 
     def __init__(
         self,
         length: int,
-        start: float,
+        start_time: float,
         timeout: float,
         shutdown_event: threading.Event | None = None,
     ):
         self.length = length
-        self.start = start
+        self.start_time = start_time
         self.timeout = timeout
         self._shutdown_event = shutdown_event or threading.Event()
         self._data: BytesIO | None = None
-        self.total = [0]
+
+        self.total_bytes_read = 0
 
     def pre_allocate(self) -> None:
         chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        multiplier = int(round(self.length / 36.0))
+        multiplier = int(round(self.length / PAYLOAD_MULTIPLIER))
 
         try:
             payload = f"content1={(chars * multiplier)[: self.length - 9]}".encode()
@@ -339,14 +337,14 @@ class HTTPUploaderData:
     def data(self) -> BytesIO:
         if not self._data:
             self.pre_allocate()
-        return self._data  # type: ignore
+        return self._data
 
-    def read(self, n: int = 10240) -> bytes:
+    def read(self, n: int = CHUNK_SIZE_BYTES) -> bytes:
         if (
-            timeit.default_timer() - self.start
+            time.monotonic() - self.start_time
         ) <= self.timeout and not self._shutdown_event.is_set():
             chunk = self.data.read(n)
-            self.total.append(len(chunk))
+            self.total_bytes_read += len(chunk)
             return chunk
 
         raise SpeedtestUploadTimeout()
@@ -355,43 +353,28 @@ class HTTPUploaderData:
         return self.length
 
 
-class HTTPUploader(threading.Thread):
-    """Thread class for putting a URL."""
+def upload_worker(
+    request: Request,
+    payload_data: HTTPUploaderData,
+    timeout: float,
+    opener: OpenerDirector | None = None,
+    shutdown_event: threading.Event | None = None,
+) -> int:
+    """Worker function for putting a URL, returning total bytes uploaded."""
 
-    def __init__(
-        self,
-        i: int,
-        request: Request,
-        start: float,
-        size: int,
-        timeout: float,
-        opener: OpenerDirector | None = None,
-        shutdown_event: threading.Event | None = None,
-    ):
-        super().__init__()
-        self.request = request
-        self.request.data.start = self.starttime = start  # type: ignore
-        self.size = size
-        self.result = 0
-        self.timeout = timeout
-        self.i = i
-        self._opener = opener.open if opener else urlopen
-        self._shutdown_event = shutdown_event or threading.Event()
+    _opener = opener.open if opener else urlopen
+    _shutdown_event = shutdown_event or threading.Event()
 
-    def run(self) -> None:
-        request = self.request
-        try:
-            if (
-                timeit.default_timer() - self.starttime
-            ) <= self.timeout and not self._shutdown_event.is_set():
-                f = self._opener(request)
-                f.read(11)
-                f.close()
-                self.result = sum(self.request.data.total)  # type: ignore
-            else:
-                self.result = 0
-        except UPLOAD_ERRORS:
-            # fallback to the amount of bytes we successfully managed to upload before the crash/timeout
-            self.result = (
-                sum(self.request.data.total) if hasattr(self.request, "data") else 0
-            )  # type: ignore
+    request.data = payload_data
+
+    try:
+        if (
+            time.monotonic() - payload_data.start_time
+        ) <= timeout and not _shutdown_event.is_set():
+            with _opener(request) as response:
+                response.read(UPLOAD_RESPONSE_TRUNCATION)
+            return payload_data.total_bytes_read
+        return 0
+    except UPLOAD_ERRORS:
+        # Fallback to the amount of bytes we successfully managed to upload before crash/timeout
+        return payload_data.total_bytes_read
