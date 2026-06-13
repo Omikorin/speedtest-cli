@@ -1,5 +1,5 @@
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from speedtest.config import fetch_config
 from speedtest.exceptions import NoMatchedServers
@@ -16,8 +16,8 @@ class Speedtest:
 
     def __init__(
         self,
-        config: Optional[Dict[str, Any]] = None,
-        source_address: Optional[str] = None,
+        config: dict[str, Any] | None = None,
+        source_address: str | None = None,
         timeout: float = 10.0,
         secure: bool = False,
         shutdown_event: Any = None,
@@ -37,9 +37,9 @@ class Speedtest:
         self.lat_lon = self.config.get("lat_lon", (0.0, 0.0))
 
         # core state data structures
-        self.servers: Dict[float, List[Dict[str, Any]]] = {}
-        self.closest: List[Dict[str, Any]] = []
-        self._best: Dict[str, Any] = {}
+        self.servers: dict[float, list[dict[str, Any]]] = {}
+        self.closest: list[dict[str, Any]] = []
+        self._best: dict[str, Any] = {}
 
         self.results = SpeedtestResults(
             client=self.config.get("client", {}),
@@ -48,7 +48,7 @@ class Speedtest:
         )
 
     @property
-    def best(self) -> Dict[str, Any]:
+    def best(self) -> dict[str, Any]:
         """Lazy-loaded property to retrieve the best available server."""
 
         if not self._best:
@@ -56,8 +56,8 @@ class Speedtest:
         return self._best
 
     def get_servers(
-        self, servers: Optional[List[int]] = None
-    ) -> Dict[float, List[Dict[str, Any]]]:
+        self, servers: list[int] | None = None
+    ) -> dict[float, list[dict[str, Any]]]:
         """
         Fetch the server list from speedtest.net, sort them by distance,
         and optionally filter down to a specified subset of IDs.
@@ -90,7 +90,7 @@ class Speedtest:
 
         return self.servers
 
-    def get_best_server(self, limit: int = 5) -> Dict[str, Any]:
+    def get_best_server(self, limit: int = 5) -> dict[str, Any]:
         """Determine the lowest-latency server by pinging the top `limit` closest options."""
 
         if not self.closest:
@@ -106,7 +106,7 @@ class Speedtest:
 
         return self._best
 
-    def download(self, threads: Optional[int] = None) -> float:
+    def download(self, threads: int | None = None) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
         bytes_received, download_speed = run_download_test(
@@ -126,7 +126,7 @@ class Speedtest:
     def upload(
         self,
         pre_allocate: bool = True,
-        threads: Optional[int] = None,
+        threads: int | None = None,
     ) -> float:
         """Test concurrent upload speed against the chosen optimal server."""
 

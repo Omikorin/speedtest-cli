@@ -2,7 +2,7 @@ import math
 import time
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from speedtest.exceptions import ServersRetrievalError, SpeedtestBestServerFailure
 from speedtest.http import (
@@ -17,7 +17,7 @@ __all__ = ["fetch_servers", "get_best_server"]
 
 
 def _calculate_distance(
-    origin: Tuple[float, float], destination: Tuple[float, float]
+    origin: tuple[float, float], destination: tuple[float, float]
 ) -> float:
     """Determine distance between 2 sets of [lat, lon] in km using the Haversine formula."""
 
@@ -40,10 +40,10 @@ def _calculate_distance(
 
 def fetch_servers(
     opener: Any,
-    lat_lon: Tuple[float, float],
-    ignore_servers: List[int] = None,
+    lat_lon: tuple[float, float],
+    ignore_servers: list[int] = None,
     secure: bool = False,
-) -> Dict[float, List[Dict[str, Any]]]:
+) -> dict[float, list[dict[str, Any]]]:
     """
     Fetch the server list from speedtest.net, parse the XML, calculate
     distances from the client, and return a dictionary grouped and sorted by distance.
@@ -55,7 +55,7 @@ def fetch_servers(
         "://www.speedtest.net/speedtest-servers-static.php",
     ]
 
-    servers: Dict[float, List[Dict[str, Any]]] = {}
+    servers: dict[float, list[dict[str, Any]]] = {}
 
     for url in urls:
         request = build_request(url, secure=secure)
@@ -111,8 +111,8 @@ def fetch_servers(
 
 
 def _ping_server(
-    server: Dict[str, Any], opener: Any, headers: Dict[str, Any] = {}, pings: int = 3
-) -> Tuple[Dict[str, Any], float]:
+    server: dict[str, Any], opener: Any, headers: dict[str, Any] = {}, pings: int = 3
+) -> tuple[dict[str, Any], float]:
     """Ping a single server multiple times and return the average latency."""
 
     url = server.get("url", "").replace("upload.php", "latency.txt")
@@ -142,8 +142,8 @@ def _ping_server(
 
 
 def get_best_server(
-    closest_servers: List[Dict[str, Any]], opener: Any
-) -> Dict[str, Any]:
+    closest_servers: list[dict[str, Any]], opener: Any
+) -> dict[str, Any]:
     """
     Concurrently ping the closest servers to determine which has the lowest latency.
     """

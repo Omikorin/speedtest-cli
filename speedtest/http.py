@@ -5,9 +5,10 @@ import socket
 import ssl
 import threading
 import timeit
+from collections.abc import Callable
 from http.client import BadStatusLine, HTTPConnection, HTTPSConnection
 from io import BytesIO
-from typing import Any, Callable
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import (
     AbstractHTTPHandler,
