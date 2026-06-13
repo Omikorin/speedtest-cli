@@ -31,11 +31,13 @@ CONFIG_EXCEPTIONS = tuple(HTTP_ERRORS) + (ConfigRetrievalError,)
 SERVER_EXCEPTIONS = tuple(HTTP_ERRORS) + (ServersRetrievalError,)
 
 
-def get_speedtest_instance(args: argparse.Namespace) -> Speedtest:
+def get_speedtest_instance(args: argparse.Namespace, threads: int | None) -> Speedtest:
     """Initialize the Speedtest core and fetch initial configurations."""
 
     try:
-        return Speedtest(source_address=args.source, timeout=args.timeout)
+        return Speedtest(
+            source_address=args.source, timeout=args.timeout, threads=threads
+        )
     except CONFIG_EXCEPTIONS as e:
         logger.error("Cannot retrieve speedtest configuration")
         raise SpeedtestCLIError(e) from e
@@ -97,7 +99,7 @@ def run_transfer_tests(st: Speedtest, args: argparse.Namespace) -> None:
         logger.info("Skipping download test")
     else:
         logger.info("Testing download speed")
-        st.download(threads=1 if args.single else None)
+        st.download()
         download_speed = convert_speed(results.download, args.units[1])
         logger.info(f"Download: {download_speed:.2f} M{args.units[0]}/s")
 
@@ -107,7 +109,6 @@ def run_transfer_tests(st: Speedtest, args: argparse.Namespace) -> None:
         logger.info("Testing upload speed")
         st.upload(
             pre_allocate=not args.no_pre_allocate,
-            threads=1 if args.single else None,
         )
         upload_speed = convert_speed(results.upload, args.units[1])
         logger.info(f"Upload: {upload_speed:.2f} M{args.units[0]}/s")

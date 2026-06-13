@@ -54,10 +54,12 @@ def shell() -> int:
 
     # state variables
     machine_format = bool(args.csv or args.json)
+    
+    threads = 1 if args.single else args.threads
 
     # initialize
     logger.info("Retrieving speedtest.net configuration...")
-    st = get_speedtest_instance(args)
+    st = get_speedtest_instance(args, threads=threads)
 
     if args.list:
         return handle_server_list(st)
