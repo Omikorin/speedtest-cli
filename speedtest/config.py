@@ -8,7 +8,8 @@ except ImportError:
     gzip = None
 
 from speedtest.exceptions import ConfigRetrievalError, SpeedtestConfigError
-from speedtest.http import build_request, catch_request, get_response_stream
+from speedtest.http.request import build_request, catch_request
+from speedtest.http.response import get_response_stream
 from speedtest.logger import logger
 
 __all__ = ["fetch_config"]

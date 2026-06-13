@@ -5,12 +5,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from urllib.request import OpenerDirector, Request
 
-from speedtest.http import (
-    HTTPUploaderData,
-    build_request,
-    download_worker,
-    upload_worker,
-)
+from speedtest.http.request import build_request
+from speedtest.http.workers import HTTPUploaderData, download_worker, upload_worker
+
 
 __all__ = ["run_download_test", "run_upload_test"]
 

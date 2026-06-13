@@ -7,7 +7,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode
 
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
-from speedtest.http import build_opener, build_request, catch_request
+from speedtest.http.handlers import build_opener
+from speedtest.http.request import build_request, catch_request
 
 __all__ = ["SpeedtestResults"]
 
@@ -181,7 +182,7 @@ class SpeedtestResults:
             self._share or "",
             self.client.get("ip", ""),
         ]
-  
+
         out = StringIO()
         writer = csv.writer(out, delimiter=delimiter, lineterminator="")
         writer.writerow(row)
