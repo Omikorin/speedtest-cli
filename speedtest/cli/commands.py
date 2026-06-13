@@ -6,7 +6,7 @@ import argparse
 import errno
 
 from speedtest.cli.output import convert_speed
-from speedtest.core import Speedtest
+from speedtest.client import Speedtest
 from speedtest.exceptions import (
     ConfigRetrievalError,
     InvalidServerIDType,
