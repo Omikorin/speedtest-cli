@@ -16,7 +16,7 @@ from speedtest.cli.commands import (
 )
 from speedtest.exceptions import SpeedtestCLIError
 from speedtest.status import ExitStatus
-from speedtest.utils import do_nothing, print_dots, printer
+from speedtest.utils import printer
 import speedtest.utils
 
 
@@ -57,7 +57,6 @@ def shell() -> int:
     # state variables
     quiet = bool(args.simple or args.csv or args.json)
     machine_format = bool(args.csv or args.json)
-    callback = do_nothing if (quiet or args.debug) else print_dots(shutdown_event)
 
     # initialize
     printer("Retrieving speedtest.net configuration...", quiet)
@@ -81,7 +80,7 @@ def shell() -> int:
         quiet,
     )
 
-    run_transfer_tests(st, args, callback, quiet)
+    run_transfer_tests(st, args, quiet)
 
     display_results(results, args, machine_format)
 

@@ -4,7 +4,6 @@ Wraps the core Speedtest logic into CLI actions
 
 import argparse
 import errno
-from typing import Callable
 
 from speedtest.cli.output import convert_speed
 from speedtest.core import Speedtest
@@ -84,7 +83,7 @@ def select_server(st: Speedtest, args: argparse.Namespace, quiet: bool) -> None:
 
 
 def run_transfer_tests(
-    st: Speedtest, args: argparse.Namespace, callback: Callable, quiet: bool
+    st: Speedtest, args: argparse.Namespace, quiet: bool
 ) -> None:
     """Execute download and upload test sequences based on CLI args."""
 
@@ -94,7 +93,7 @@ def run_transfer_tests(
         printer("Skipping download test", quiet)
     else:
         printer("Testing download speed", quiet, end="\n" if args.debug else "")
-        st.download(callback=callback, threads=1 if args.single else None)
+        st.download(threads=1 if args.single else None)
         download_speed = convert_speed(results.download, args.units[1])
         printer(f"Download: {download_speed:.2f} M{args.units[0]}/s", quiet)
 
@@ -103,7 +102,6 @@ def run_transfer_tests(
     else:
         printer("Testing upload speed", quiet, end="\n" if args.debug else "")
         st.upload(
-            callback=callback,
             pre_allocate=not args.no_pre_allocate,
             threads=1 if args.single else None,
         )

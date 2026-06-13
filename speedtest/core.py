@@ -1,5 +1,5 @@
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from speedtest.config import fetch_config
 from speedtest.exceptions import NoMatchedServers
@@ -7,7 +7,6 @@ from speedtest.http import build_opener
 from speedtest.results import SpeedtestResults
 from speedtest.servers import fetch_servers, get_best_server
 from speedtest.transfer import run_download_test, run_upload_test
-from speedtest.utils import do_nothing
 
 __all__ = ["Speedtest"]
 
@@ -108,7 +107,7 @@ class Speedtest:
         return self._best
 
     def download(
-        self, callback: Callable = do_nothing, threads: Optional[int] = None
+        self, threads: Optional[int] = None
     ) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
@@ -118,7 +117,6 @@ class Speedtest:
             opener=self._opener,
             secure=self._secure,
             shutdown_event=self._shutdown_event,
-            callback=callback,
             threads=threads,
         )
 
@@ -129,7 +127,6 @@ class Speedtest:
 
     def upload(
         self,
-        callback: Callable = do_nothing,
         pre_allocate: bool = True,
         threads: Optional[int] = None,
     ) -> float:
@@ -141,7 +138,6 @@ class Speedtest:
             opener=self._opener,
             secure=self._secure,
             shutdown_event=self._shutdown_event,
-            callback=callback,
             pre_allocate=pre_allocate,
             threads=threads,
         )

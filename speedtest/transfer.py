@@ -1,10 +1,9 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from speedtest.http import HTTPDownloader, HTTPUploader, HTTPUploaderData, build_request
-from speedtest.utils import do_nothing
 
 __all__ = ["run_download_test", "run_upload_test"]
 
@@ -15,7 +14,6 @@ def run_download_test(
     opener: Any,
     secure: bool,
     shutdown_event: Any,
-    callback: Callable = do_nothing,
     threads: Optional[int] = None,
 ) -> Tuple[float, float]:
     """
@@ -30,14 +28,12 @@ def run_download_test(
         for _ in range(config["counts"]["download"]):
             urls.append(f"{base_url}/random{size}x{size}.jpg")
 
-    request_count = len(urls)
     requests = [build_request(url, bump=i, secure=secure) for i, url in enumerate(urls)]
     max_threads = threads or config["threads"]["download"]
 
     # wrapper to execute the legacy thread payload
     # TODO: modernize this
     def _download_task(i: int, request: Any, start_time: float) -> float:
-        callback(i, request_count, start=True)
         task = HTTPDownloader(
             i,
             request,
@@ -47,7 +43,6 @@ def run_download_test(
             shutdown_event=shutdown_event,
         )
         task.run()
-        callback(i, request_count, end=True)
         return sum(task.result)
 
     bytes_received = 0.0
@@ -78,7 +73,6 @@ def run_upload_test(
     opener: Any,
     secure: bool,
     shutdown_event: Any,
-    callback: Callable = do_nothing,
     pre_allocate: bool = True,
     threads: Optional[int] = None,
 ) -> Tuple[float, float]:
@@ -115,7 +109,6 @@ def run_upload_test(
     # wrapper to execute the legacy thread payload
     # TODO: modernize this
     def _upload_task(i: int, request: Any, size: int, start_time: float) -> float:
-        callback(i, request_count, start=True)
         task = HTTPUploader(
             i,
             request,
@@ -126,7 +119,6 @@ def run_upload_test(
             shutdown_event=shutdown_event,
         )
         task.run()
-        callback(i, request_count, end=True)
         return task.result
 
     bytes_sent = 0.0
