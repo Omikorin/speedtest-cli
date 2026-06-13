@@ -15,8 +15,8 @@ from speedtest.exceptions import (
     SpeedtestCLIError,
 )
 from speedtest.http import HTTP_ERRORS
-from speedtest.status import ExitStatus
 from speedtest.logger import logger
+from speedtest.status import ExitStatus
 
 # Exception groupings for cleaner try/except blocks
 CONFIG_EXCEPTIONS = tuple(HTTP_ERRORS) + (ConfigRetrievalError,)
