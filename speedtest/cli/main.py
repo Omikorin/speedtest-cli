@@ -16,8 +16,8 @@ from speedtest.cli.commands import (
 from speedtest.cli.output import csv_header, display_results
 from speedtest.cli.parser import parse_args
 from speedtest.exceptions import SpeedtestCLIError
-from speedtest.logger import logger, setup_logging
-from speedtest.status import ExitStatus
+from speedtest.utils.logger import logger, setup_logging
+from speedtest.utils.status import ExitStatus
 
 __all__ = ["shell"]
 

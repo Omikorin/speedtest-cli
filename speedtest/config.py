@@ -10,7 +10,7 @@ except ImportError:
 from speedtest.exceptions import ConfigRetrievalError, SpeedtestConfigError
 from speedtest.http.request import build_request, catch_request
 from speedtest.http.response import get_response_stream
-from speedtest.logger import logger
+from speedtest.utils.logger import logger
 
 __all__ = ["fetch_config"]
 

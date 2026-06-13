@@ -8,7 +8,7 @@ from urllib.request import OpenerDirector
 from speedtest.exceptions import ServersRetrievalError, SpeedtestBestServerFailure
 from speedtest.http.request import build_request, build_user_agent, catch_request
 from speedtest.http.response import get_response_stream
-from speedtest.logger import logger
+from speedtest.utils.logger import logger
 
 __all__ = ["fetch_servers", "get_best_server"]
 

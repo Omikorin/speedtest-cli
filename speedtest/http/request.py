@@ -10,7 +10,7 @@ from urllib.request import OpenerDirector, Request, urlopen
 
 from speedtest import __version__
 from speedtest.http.errors import HTTP_ERRORS
-from speedtest.logger import logger
+from speedtest.utils.logger import logger
 
 __all__ = [
     "build_user_agent",
