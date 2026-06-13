@@ -9,7 +9,7 @@ except ImportError:
 
 from speedtest.exceptions import ConfigRetrievalError, SpeedtestConfigError
 from speedtest.http import build_request, catch_request, get_response_stream
-from speedtest.utils import printer
+from speedtest.logger import logger
 
 __all__ = ["fetch_config"]
 
@@ -50,7 +50,7 @@ def fetch_config(opener: Any, secure: bool = False) -> Dict[str, Any]:
         return {}
 
     configxml = b"".join(configxml_list)
-    printer(f"Config XML:\n{configxml.decode(errors='ignore')}", debug=True)
+    logger.debug(f"Config XML:\n{configxml.decode(errors='ignore')}")
 
     try:
         root = ET.fromstring(configxml)
@@ -110,5 +110,5 @@ def fetch_config(opener: Any, secure: bool = False) -> Dict[str, Any]:
         "lat_lon": lat_lon,
     }
 
-    printer(f"Config:\n{parsed_config}", debug=True)
+    logger.debug(f"Config:\n{parsed_config}")
     return parsed_config

@@ -25,7 +25,7 @@ from speedtest.exceptions import (
     SpeedtestCLIError,
     SpeedtestUploadTimeout,
 )
-from speedtest.utils import printer
+from speedtest.logger import logger
 
 # Consolidating errors
 HTTP_ERRORS = (
@@ -165,11 +165,11 @@ def build_opener(
 ) -> OpenerDirector:
     """Build an ``OpenerDirector`` with explicit handlers."""
 
-    printer(f"Timeout set to {timeout}", debug=True)
+    logger.debug(f"Timeout set to {timeout}")
 
     source_address_tuple = (source_address, 0) if source_address else None
     if source_address_tuple:
-        printer(f"Binding to source address: {source_address_tuple!r}", debug=True)
+        logger.debug(f"Binding to source address: {source_address_tuple!r}")
 
     handlers = [
         ProxyHandler(),
@@ -216,7 +216,7 @@ def build_user_agent() -> str:
         f"speedtest-cli-ng/{__version__}",
     )
     user_agent = " ".join(ua_tuple)
-    printer(f"User-Agent: {user_agent}", debug=True)
+    logger.debug(f"User-Agent: {user_agent}")
     return user_agent
 
 
@@ -245,7 +245,7 @@ def build_request(
     headers["Cache-Control"] = "no-cache"
 
     method_str = "POST" if data else "GET"
-    printer(f"{method_str} {final_url}", debug=True)
+    logger.debug(f"{method_str} {final_url}")
 
     return Request(final_url, data=data, headers=headers)
 
@@ -260,7 +260,7 @@ def catch_request(
     try:
         uh = _open(request)
         if request.get_full_url() != uh.geturl():
-            printer(f"Redirected to {uh.geturl()}", debug=True)
+            logger.debug(f"Redirected to {uh.geturl()}")
         return uh, False
     except HTTP_ERRORS as e:
         return None, e
