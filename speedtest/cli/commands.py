@@ -18,6 +18,14 @@ from speedtest.http import HTTP_ERRORS
 from speedtest.logger import logger
 from speedtest.status import ExitStatus
 
+__all__ = [
+    "get_speedtest_instance",
+    "handle_server_list",
+    "select_server",
+    "run_transfer_tests",
+]
+
+
 # Exception groupings for cleaner try/except blocks
 CONFIG_EXCEPTIONS = tuple(HTTP_ERRORS) + (ConfigRetrievalError,)
 SERVER_EXCEPTIONS = tuple(HTTP_ERRORS) + (ServersRetrievalError,)

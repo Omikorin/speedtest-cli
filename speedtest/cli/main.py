@@ -19,6 +19,8 @@ from speedtest.exceptions import SpeedtestCLIError
 from speedtest.logger import logger, setup_logging
 from speedtest.status import ExitStatus
 
+__all__ = ["shell"]
+
 
 def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
     """Catch Ctrl-C key sequence and set a SHUTDOWN_EVENT for our threaded operations."""
