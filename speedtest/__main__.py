@@ -5,7 +5,7 @@ The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 import sys
 
 from speedtest.exceptions import SpeedtestException
-from speedtest.logger import bv logger
+from speedtest.logger import logger
 from speedtest.status import ExitStatus
 
 

@@ -4,9 +4,9 @@ Handles formatting, printing, and CSV/JSON output
 
 import argparse
 
+from speedtest.logger import logger
 from speedtest.results import SpeedtestResults
 from speedtest.status import ExitStatus
-from speedtest.logger import logger
 
 
 def convert_speed(speed_bps: float, unit_divisor: int) -> float:
