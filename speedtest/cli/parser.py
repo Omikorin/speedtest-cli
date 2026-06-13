@@ -101,10 +101,10 @@ def parse_args() -> argparse.Namespace:
         help="Do not pre-allocate upload data. Disable to avoid MemoryErrors on low-memory systems.",
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
+        "--debug", action="store_true", default=False, help="Show debugging output."
     )
     parser.add_argument(
-        "--debug", action="store_true", default=False, help="Show debugging output"
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     return parser.parse_args()
