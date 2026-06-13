@@ -34,7 +34,6 @@ class SpeedtestResults:
         server: dict[str, Any] | None = None,
         client: dict[str, str] | None = None,
         opener: Any = None,
-        secure: bool = False,
     ):
         self.download = download
         self.upload = upload
@@ -55,7 +54,6 @@ class SpeedtestResults:
         self.bytes_sent = 0
 
         self._opener = opener or build_opener()
-        self._secure = secure
 
     def __repr__(self) -> str:
         return repr(self.dict())
@@ -94,13 +92,12 @@ class SpeedtestResults:
         ]
 
         api_data = urlencode(api_parameters).encode()
-        headers = {"Referer": "http://c.speedtest.net/flash/speedtest.swf"}
+        headers = {"Referer": "https://c.speedtest.net/flash/speedtest.swf"}
 
         request = build_request(
-            "://www.speedtest.net/api/api.php",
+            "https://www.speedtest.net/api/api.php",
             data=api_data,
             headers=headers,
-            secure=self._secure,
         )
 
         f, e = catch_request(request, opener=self._opener)
@@ -184,7 +181,7 @@ class SpeedtestResults:
             self._share or "",
             self.client.get("ip", ""),
         ]
-
+  
         out = StringIO()
         writer = csv.writer(out, delimiter=delimiter, lineterminator="")
         writer.writerow(row)
