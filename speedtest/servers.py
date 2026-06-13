@@ -42,7 +42,6 @@ def fetch_servers(
     opener: Any,
     lat_lon: tuple[float, float],
     ignore_servers: list[int] = None,
-    secure: bool = False,
 ) -> dict[float, list[dict[str, Any]]]:
     """
     Fetch the server list from speedtest.net, parse the XML, calculate
@@ -51,14 +50,14 @@ def fetch_servers(
 
     ignore_servers = ignore_servers or []
     urls = [
-        "://c.speedtest.net/speedtest-servers-static.php",
-        "://www.speedtest.net/speedtest-servers-static.php",
+        "https://c.speedtest.net/speedtest-servers-static.php",
+        "https://www.speedtest.net/speedtest-servers-static.php",
     ]
 
     servers: dict[float, list[dict[str, Any]]] = {}
 
     for url in urls:
-        request = build_request(url, secure=secure)
+        request = build_request(url)
         uh, e = catch_request(request, opener=opener)
         if e:
             continue

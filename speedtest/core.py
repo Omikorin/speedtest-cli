@@ -19,18 +19,16 @@ class Speedtest:
         config: dict[str, Any] | None = None,
         source_address: str | None = None,
         timeout: float = 10.0,
-        secure: bool = False,
         shutdown_event: Any = None,
     ):
         self._source_address = source_address
         self._timeout = timeout
-        self._secure = secure
         self._shutdown_event = shutdown_event or threading.Event()
 
         self._opener = build_opener(source_address, timeout)
 
         # fetch default configuration and merge optional overrides
-        self.config = fetch_config(self._opener, self._secure)
+        self.config = fetch_config(self._opener)
         if config is not None:
             self.config.update(config)
 
@@ -44,7 +42,6 @@ class Speedtest:
         self.results = SpeedtestResults(
             client=self.config.get("client", {}),
             opener=self._opener,
-            secure=secure,
         )
 
     @property
@@ -69,7 +66,6 @@ class Speedtest:
             opener=self._opener,
             lat_lon=self.lat_lon,
             ignore_servers=ignore,
-            secure=self._secure,
         )
 
         # flatten the distance-grouped dict into a clean linear list sorted by proximity
@@ -113,7 +109,6 @@ class Speedtest:
             best_server_url=self.best["url"],
             config=self.config,
             opener=self._opener,
-            secure=self._secure,
             shutdown_event=self._shutdown_event,
             threads=threads,
         )
@@ -134,7 +129,6 @@ class Speedtest:
             best_server_url=self.best["url"],
             config=self.config,
             opener=self._opener,
-            secure=self._secure,
             shutdown_event=self._shutdown_event,
             pre_allocate=pre_allocate,
             threads=threads,

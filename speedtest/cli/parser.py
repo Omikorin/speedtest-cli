@@ -93,11 +93,6 @@ def parse_args() -> argparse.Namespace:
         "--timeout", default=10, type=float, help="HTTP timeout in seconds."
     )
     parser.add_argument(
-        "--secure",
-        action="store_false",
-        help="Use HTTPS instead of HTTP when communicating with speedtest.net operated servers",
-    )
-    parser.add_argument(
         "--no-pre-allocate",
         dest="no_pre_allocate",
         action="store_true",

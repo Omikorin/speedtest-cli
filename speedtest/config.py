@@ -14,7 +14,7 @@ from speedtest.logger import logger
 __all__ = ["fetch_config"]
 
 
-def fetch_config(opener: Any, secure: bool = False) -> dict[str, Any]:
+def fetch_config(opener: Any) -> dict[str, Any]:
     """
     Download the speedtest.net configuration, parse the XML,
     and return a standardized dictionary of settings.
@@ -22,9 +22,8 @@ def fetch_config(opener: Any, secure: bool = False) -> dict[str, Any]:
 
     headers = {"Accept-Encoding": "gzip"} if gzip else {}
     request = build_request(
-        "://www.speedtest.net/speedtest-config.php",
+        "https://www.speedtest.net/speedtest-config.php",
         headers=headers,
-        secure=secure,
     )
 
     uh, e = catch_request(request, opener=opener)

@@ -226,22 +226,15 @@ def build_request(
     data: bytes | None = None,
     headers: dict[str, str] | None = None,
     bump: str = "0",
-    secure: bool = False,
 ) -> Request:
     """Build a urllib request object."""
 
     headers = headers or {}
 
-    if url.startswith(":"):
-        scheme = "https" if secure else "http"
-        schemed_url = f"{scheme}{url}"
-    else:
-        schemed_url = url
-
     delim = "&" if "?" in url else "?"
 
     # Cache buster using current milliseconds
-    final_url = f"{schemed_url}{delim}x={int(timeit.time.time() * 1000)}.{bump}"
+    final_url = f"{url}{delim}x={int(timeit.time.time() * 1000)}.{bump}"
 
     headers["Cache-Control"] = "no-cache"
 

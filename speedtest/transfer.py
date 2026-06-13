@@ -12,7 +12,6 @@ def run_download_test(
     best_server_url: str,
     config: dict[str, Any],
     opener: Any,
-    secure: bool,
     shutdown_event: Any,
     threads: int | None = None,
 ) -> tuple[float, float]:
@@ -28,7 +27,7 @@ def run_download_test(
         for _ in range(config["counts"]["download"]):
             urls.append(f"{base_url}/random{size}x{size}.jpg")
 
-    requests = [build_request(url, bump=i, secure=secure) for i, url in enumerate(urls)]
+    requests = [build_request(url, bump=i) for i, url in enumerate(urls)]
     max_threads = threads or config["threads"]["download"]
 
     # wrapper to execute the legacy thread payload
@@ -71,7 +70,6 @@ def run_upload_test(
     best_server_url: str,
     config: dict[str, Any],
     opener: Any,
-    secure: bool,
     shutdown_event: Any,
     pre_allocate: bool = True,
     threads: int | None = None,
@@ -101,7 +99,7 @@ def run_upload_test(
             data.pre_allocate()
 
         headers = {"Content-length": str(size)}
-        req = build_request(best_server_url, data, secure=secure, headers=headers)
+        req = build_request(best_server_url, data, headers=headers)
         requests.append((req, size))
 
     max_threads = threads or config["threads"]["upload"]

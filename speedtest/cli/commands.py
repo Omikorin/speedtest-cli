@@ -35,9 +35,7 @@ def get_speedtest_instance(args: argparse.Namespace) -> Speedtest:
     """Initialize the Speedtest core and fetch initial configurations."""
 
     try:
-        return Speedtest(
-            source_address=args.source, timeout=args.timeout, secure=args.secure
-        )
+        return Speedtest(source_address=args.source, timeout=args.timeout)
     except CONFIG_EXCEPTIONS as e:
         logger.error("Cannot retrieve speedtest configuration")
         raise SpeedtestCLIError(e) from e
