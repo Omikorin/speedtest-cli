@@ -6,18 +6,17 @@ import signal
 import threading
 from typing import Any, Callable
 
-from speedtest.cli.parser import parse_args, validate_optional_args
-from speedtest.cli.output import csv_header, display_results
 from speedtest.cli.commands import (
     get_speedtest_instance,
     handle_server_list,
-    select_server,
     run_transfer_tests,
+    select_server,
 )
+from speedtest.cli.output import csv_header, display_results
+from speedtest.cli.parser import parse_args, validate_optional_args
 from speedtest.exceptions import SpeedtestCLIError
+from speedtest.logger import logger, setup_logging
 from speedtest.status import ExitStatus
-from speedtest.utils import printer
-import speedtest.utils
 
 
 def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
@@ -25,7 +24,7 @@ def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
 
     def inner(signum: int, frame: Any) -> None:
         shutdown_event.set()
-        printer("\nStopping speedtest-cli...")
+        logger.warning("\nStopping speedtest-cli...")
         raise KeyboardInterrupt
 
     return inner
@@ -38,6 +37,7 @@ def shell() -> int:
     signal.signal(signal.SIGINT, ctrl_c(shutdown_event))
 
     args = parse_args()
+    setup_logging(debug=args.debug)
 
     # pre-flight checks
     if args.no_download and args.no_upload:
@@ -51,36 +51,30 @@ def shell() -> int:
 
     validate_optional_args(args)
 
-    if args.debug:
-        speedtest.utils.DEBUG = True
-
     # state variables
-    quiet = bool(args.simple or args.csv or args.json)
     machine_format = bool(args.csv or args.json)
 
     # initialize
-    printer("Retrieving speedtest.net configuration...", quiet)
+    logger.info("Retrieving speedtest.net configuration...")
     st = get_speedtest_instance(args)
 
     if args.list:
         return handle_server_list(st)
 
-    printer(
-        f"Testing from {st.config['client']['isp']} ({st.config['client']['ip']})...",
-        quiet,
+    logger.info(
+        f"Testing from {st.config['client']['isp']} ({st.config['client']['ip']})..."
     )
 
     # select server
-    select_server(st, args, quiet)
+    select_server(st, args)
 
     results = st.results
-    printer(
+    logger.info(
         f"Hosted by {results.server['sponsor']} ({results.server['name']}) "
-        f"[{results.server['d']:.2f} km]: {results.ping:.4f} ms",
-        quiet,
+        f"[{results.server['d']:.2f} km]: {results.ping:.4f} ms"
     )
 
-    run_transfer_tests(st, args, quiet)
+    run_transfer_tests(st, args)
 
     display_results(results, args, machine_format)
 

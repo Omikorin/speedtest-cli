@@ -11,7 +11,7 @@ from speedtest.http import (
     catch_request,
     get_response_stream,
 )
-from speedtest.utils import printer
+from speedtest.logger import logger
 
 __all__ = ["fetch_servers", "get_best_server"]
 
@@ -71,7 +71,7 @@ def fetch_servers(
         if int(uh.code) != 200:
             continue
 
-        printer(f"Servers XML:\n{serversxml.decode(errors='ignore')}", debug=True)
+        logger.debug(f"Servers XML:\n{serversxml.decode(errors='ignore')}")
 
         try:
             root = ET.fromstring(serversxml)
@@ -106,7 +106,7 @@ def fetch_servers(
             "Failed to retrieve or parse speedtest server list."
         )
 
-    printer(f"Discovered {sum(len(s) for s in servers.values())} servers.", debug=True)
+    logger.debug(f"Discovered {sum(len(s) for s in servers.values())} servers.")
     return servers
 
 
@@ -167,17 +167,16 @@ def get_best_server(
                     lowest_latency = latency
                     best_server = server
             except Exception as e:
-                printer(f"Server ping generated an exception: {e}", debug=True)
+                logger.debug(f"Server ping generated an exception: {e}")
 
     if best_server is None:
         raise SpeedtestBestServerFailure(
             "Unable to determine best server via latency pings."
         )
 
-    printer(
+    logger.debug(
         f"Best server selected: {best_server.get('sponsor')} "
-        f"({best_server.get('name')}) with latency {best_server.get('latency_ms'):.4f} ms",
-        debug=True,
+        f"({best_server.get('name')}) with latency {best_server.get('latency_ms'):.4f} ms"
     )
 
     return best_server

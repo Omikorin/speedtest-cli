@@ -5,8 +5,8 @@ The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 import sys
 
 from speedtest.exceptions import SpeedtestException
+from speedtest.logger import bv logger
 from speedtest.status import ExitStatus
-from speedtest.utils import printer
 
 
 def main() -> int:
@@ -16,7 +16,7 @@ def main() -> int:
         exit_status = shell()
 
     except KeyboardInterrupt:
-        printer("Stopped by user", error=True)
+        logger.error("Stopped by user")
         exit_status = ExitStatus.ERROR_CTRL_C
 
     except SpeedtestException as e:
@@ -32,10 +32,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
-    except AttributeError:
-        pass
-
     sys.exit(main())
