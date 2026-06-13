@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from hashlib import md5
 from io import StringIO
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import parse_qs, urlencode
 
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
@@ -31,8 +31,8 @@ class SpeedtestResults:
         download: float = 0.0,
         upload: float = 0.0,
         ping: float = 0.0,
-        server: Optional[Dict[str, Any]] = None,
-        client: Optional[Dict[str, str]] = None,
+        server: dict[str, Any] | None = None,
+        client: dict[str, str] | None = None,
         opener: Any = None,
         secure: bool = False,
     ):
@@ -42,7 +42,7 @@ class SpeedtestResults:
         self.server = server or {}
         self.client = client or {}
 
-        self._share: Optional[str] = None
+        self._share: str | None = None
 
         # generate a clean ISO 8601 UTC timestamp
         self.timestamp = (
@@ -128,7 +128,7 @@ class SpeedtestResults:
         self._share = f"https://www.speedtest.net/result/{resultid[0]}.png"
         return self._share
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         """Return dictionary of result data."""
 
         return {
@@ -194,5 +194,5 @@ class SpeedtestResults:
     def json(self, pretty: bool = False) -> str:
         """Return data in JSON format."""
 
-        kwargs: Dict[str, Any] = {"indent": 4, "sort_keys": True} if pretty else {}
+        kwargs: dict[str, Any] = {"indent": 4, "sort_keys": True} if pretty else {}
         return json.dumps(self.dict(), **kwargs)

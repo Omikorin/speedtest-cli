@@ -1,6 +1,6 @@
 import math
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List
+from typing import Any
 
 try:
     import gzip
@@ -14,7 +14,7 @@ from speedtest.logger import logger
 __all__ = ["fetch_config"]
 
 
-def fetch_config(opener: Any, secure: bool = False) -> Dict[str, Any]:
+def fetch_config(opener: Any, secure: bool = False) -> dict[str, Any]:
     """
     Download the speedtest.net configuration, parse the XML,
     and return a standardized dictionary of settings.
@@ -31,7 +31,7 @@ def fetch_config(opener: Any, secure: bool = False) -> Dict[str, Any]:
     if e:
         raise ConfigRetrievalError(e) from e
 
-    configxml_list: List[bytes] = []
+    configxml_list: list[bytes] = []
     stream = get_response_stream(uh)
 
     while True:

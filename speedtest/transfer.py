@@ -1,7 +1,7 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from speedtest.http import HTTPDownloader, HTTPUploader, HTTPUploaderData, build_request
 
@@ -10,12 +10,12 @@ __all__ = ["run_download_test", "run_upload_test"]
 
 def run_download_test(
     best_server_url: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     opener: Any,
     secure: bool,
     shutdown_event: Any,
-    threads: Optional[int] = None,
-) -> Tuple[float, float]:
+    threads: int | None = None,
+) -> tuple[float, float]:
     """
     Execute multi-threaded download speed test against the target server.
     Returns a tuple of (bytes_received, download_speed_bps).
@@ -69,13 +69,13 @@ def run_download_test(
 
 def run_upload_test(
     best_server_url: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     opener: Any,
     secure: bool,
     shutdown_event: Any,
     pre_allocate: bool = True,
-    threads: Optional[int] = None,
-) -> Tuple[float, float]:
+    threads: int | None = None,
+) -> tuple[float, float]:
     """
     Execute multi-threaded upload speed test against the target server.
     Returns a tuple of (bytes_sent, upload_speed_bps).

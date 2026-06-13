@@ -4,7 +4,8 @@ The main entry point of shell
 
 import signal
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from speedtest.cli.commands import (
     get_speedtest_instance,
