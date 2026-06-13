@@ -334,7 +334,7 @@ class HTTPUploaderData:
         multiplier = int(round(self.length / 36.0))
 
         try:
-            payload = f"content1={(chars * multiplier)[:self.length - 9]}".encode()
+            payload = f"content1={(chars * multiplier)[: self.length - 9]}".encode()
             self._data = BytesIO(payload)
         except MemoryError:
             raise SpeedtestCLIError(
@@ -398,4 +398,6 @@ class HTTPUploader(threading.Thread):
                 self.result = 0
         except UPLOAD_ERRORS:
             # fallback to the amount of bytes we successfully managed to upload before the crash/timeout
-            self.result = sum(self.request.data.total) if hasattr(self.request, "data") else 0  # type: ignore
+            self.result = (
+                sum(self.request.data.total) if hasattr(self.request, "data") else 0
+            )  # type: ignore

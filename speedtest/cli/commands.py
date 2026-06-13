@@ -82,9 +82,7 @@ def select_server(st: Speedtest, args: argparse.Namespace, quiet: bool) -> None:
     st.get_best_server()
 
 
-def run_transfer_tests(
-    st: Speedtest, args: argparse.Namespace, quiet: bool
-) -> None:
+def run_transfer_tests(st: Speedtest, args: argparse.Namespace, quiet: bool) -> None:
     """Execute download and upload test sequences based on CLI args."""
 
     results = st.results

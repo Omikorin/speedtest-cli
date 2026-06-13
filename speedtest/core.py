@@ -106,9 +106,7 @@ class Speedtest:
 
         return self._best
 
-    def download(
-        self, threads: Optional[int] = None
-    ) -> float:
+    def download(self, threads: Optional[int] = None) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
         bytes_received, download_speed = run_download_test(
