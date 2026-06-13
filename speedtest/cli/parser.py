@@ -7,6 +7,8 @@ from http.client import HTTPSConnection
 
 from speedtest import __version__
 
+__all__ = ["parse_args"]
+
 
 def parse_args() -> argparse.Namespace:
     """Function to handle building and parsing of command line arguments."""

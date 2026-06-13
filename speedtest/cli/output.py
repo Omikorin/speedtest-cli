@@ -8,6 +8,8 @@ from speedtest.logger import logger
 from speedtest.results import SpeedtestResults
 from speedtest.status import ExitStatus
 
+__all__ = ["convert_speed", "csv_header", "display_results"]
+
 
 def convert_speed(speed_bps: float, unit_divisor: int) -> float:
     """Convert speed from bits per second to the requested unit (Mega/s)."""
