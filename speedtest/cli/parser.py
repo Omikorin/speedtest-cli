@@ -25,10 +25,28 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "-l",
+        "--list",
+        action="store_true",
+        help="Show available speedtest.net servers sorted by distance.",
+    )
+    parser.add_argument(
+        "-s",
+        "--server",
+        type=int,
+        help="Specify a server id to test against.",
+    )
+    parser.add_argument(
+        "-t",
+        "--threads",
+        type=int,
+        help="Set the number of concurrent connections instead of downloaded config.",
+    )
+    parser.add_argument(
         "--single",
         default=False,
         action="store_true",
-        help="Only use a single connection instead of multiple. Simulates a typical file transfer.",
+        help="Use one concurrent connection. Simulates a typical file transfer.",
     )
     parser.add_argument(
         "--no-download",
@@ -76,17 +94,6 @@ def parse_args() -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s.",
-    )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="Display a list of speedtest.net servers sorted by distance",
-    )
-    parser.add_argument(
-        "--server",
-        action="append",
-        type=int,
-        help="Specify a server ID to test against. Can be supplied multiple times.",
     )
     parser.add_argument("--source", help="Source IP address to bind to")
     parser.add_argument(

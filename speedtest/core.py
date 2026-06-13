@@ -20,10 +20,12 @@ class Speedtest:
         source_address: str | None = None,
         timeout: float = 10.0,
         shutdown_event: Any = None,
+        threads: int | None = None,
     ):
         self._source_address = source_address
         self._timeout = timeout
         self._shutdown_event = shutdown_event or threading.Event()
+        self._threads = threads
 
         self._opener = build_opener(source_address, timeout)
 
@@ -102,7 +104,7 @@ class Speedtest:
 
         return self._best
 
-    def download(self, threads: int | None = None) -> float:
+    def download(self) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
         bytes_received, download_speed = run_download_test(
@@ -110,7 +112,7 @@ class Speedtest:
             config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
-            threads=threads,
+            threads=self._threads,
         )
 
         self.results.bytes_received = bytes_received
@@ -118,11 +120,7 @@ class Speedtest:
 
         return self.results.download
 
-    def upload(
-        self,
-        pre_allocate: bool = True,
-        threads: int | None = None,
-    ) -> float:
+    def upload(self, pre_allocate: bool = True) -> float:
         """Test concurrent upload speed against the chosen optimal server."""
 
         bytes_sent, upload_speed = run_upload_test(
@@ -131,7 +129,7 @@ class Speedtest:
             opener=self._opener,
             shutdown_event=self._shutdown_event,
             pre_allocate=pre_allocate,
-            threads=threads,
+            threads=self._threads,
         )
 
         self.results.bytes_sent = bytes_sent
