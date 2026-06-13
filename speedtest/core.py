@@ -1,12 +1,12 @@
 import threading
 from typing import Any
 
-from speedtest.config import fetch_config
+from speedtest.engine.config import fetch_config
 from speedtest.exceptions import NoMatchedServers
 from speedtest.http.handlers import build_opener
-from speedtest.results import SpeedtestResults
-from speedtest.servers import fetch_servers, get_best_server
-from speedtest.transfer import run_download_test, run_upload_test
+from speedtest.engine.results import SpeedtestResults
+from speedtest.engine.servers import fetch_servers, get_best_server
+from speedtest.engine.transfer import run_download_test, run_upload_test
 
 __all__ = ["Speedtest"]
 

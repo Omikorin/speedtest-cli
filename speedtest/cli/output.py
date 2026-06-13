@@ -5,7 +5,7 @@ Handles formatting, printing, and CSV/JSON output
 import argparse
 
 from speedtest.utils.logger import logger
-from speedtest.results import SpeedtestResults
+from speedtest.engine.results import SpeedtestResults
 from speedtest.utils.status import ExitStatus
 
 __all__ = ["convert_speed", "csv_header", "display_results"]
