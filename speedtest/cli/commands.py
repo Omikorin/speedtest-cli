@@ -14,7 +14,7 @@ from speedtest.exceptions import (
     ServersRetrievalError,
     SpeedtestCLIError,
 )
-from speedtest.http import HTTP_ERRORS
+from speedtest.http.errors import HTTP_ERRORS
 from speedtest.utils.logger import logger
 from speedtest.utils.status import ExitStatus
 
