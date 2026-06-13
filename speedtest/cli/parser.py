@@ -3,7 +3,6 @@ Handles CLI arguments and validation.
 """
 
 import argparse
-from http.client import HTTPSConnection
 
 from speedtest import __version__
 
@@ -95,7 +94,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--secure",
-        action="store_true",
+        action="store_false",
         help="Use HTTPS instead of HTTP when communicating with speedtest.net operated servers",
     )
     parser.add_argument(
@@ -112,15 +111,3 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
-
-
-def validate_optional_args(args: argparse.Namespace) -> None:
-    """Check if an argument was provided that depends on a missing module."""
-
-    optional_args = {
-        "secure": ("SSL support", HTTPSConnection),
-    }
-
-    for arg, info in optional_args.items():
-        if getattr(args, arg, False) and info[1] is None:
-            raise SystemExit(f"{info[0]} is not installed. --{arg} is unavailable")

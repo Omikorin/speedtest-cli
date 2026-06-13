@@ -14,7 +14,7 @@ from speedtest.cli.commands import (
     select_server,
 )
 from speedtest.cli.output import csv_header, display_results
-from speedtest.cli.parser import parse_args, validate_optional_args
+from speedtest.cli.parser import parse_args
 from speedtest.exceptions import SpeedtestCLIError
 from speedtest.logger import logger, setup_logging
 from speedtest.status import ExitStatus
@@ -51,8 +51,6 @@ def shell() -> int:
 
     if args.csv_header:
         return csv_header(args.csv_delimiter)
-
-    validate_optional_args(args)
 
     # state variables
     machine_format = bool(args.csv or args.json)
