@@ -15,8 +15,8 @@ from speedtest.exceptions import (
     SpeedtestCLIError,
 )
 from speedtest.http import HTTP_ERRORS
-from speedtest.logger import logger
-from speedtest.status import ExitStatus
+from speedtest.utils.logger import logger
+from speedtest.utils.status import ExitStatus
 
 __all__ = [
     "get_speedtest_instance",

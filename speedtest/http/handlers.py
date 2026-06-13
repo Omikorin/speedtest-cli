@@ -20,7 +20,7 @@ from speedtest.http.connections import (
     build_connection,
 )
 from speedtest.http.request import build_user_agent
-from speedtest.logger import logger
+from speedtest.utils.logger import logger
 
 __all__ = [
     "SpeedtestHTTPHandler",

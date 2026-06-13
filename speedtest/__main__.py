@@ -5,8 +5,8 @@ The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 import sys
 
 from speedtest.exceptions import SpeedtestException
-from speedtest.logger import logger
-from speedtest.status import ExitStatus
+from speedtest.utils.logger import logger
+from speedtest.utils.status import ExitStatus
 
 
 def main() -> int:
