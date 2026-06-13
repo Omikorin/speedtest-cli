@@ -3,6 +3,7 @@ import time
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
+from urllib.request import OpenerDirector
 
 from speedtest.exceptions import ServersRetrievalError, SpeedtestBestServerFailure
 from speedtest.http import (
@@ -110,16 +111,19 @@ def fetch_servers(
 
 
 def _ping_server(
-    server: dict[str, Any], opener: Any, headers: dict[str, Any] = {}, pings: int = 3
+    server: dict[str, Any],
+    opener: OpenerDirector,
+    headers: dict[str, Any] = {},
+    pings: int = 3,
 ) -> tuple[dict[str, Any], float]:
     """Ping a single server multiple times and return the average latency."""
 
-    url = server.get("url", "").replace("upload.php", "latency.txt")
+    url: str = server.get("url", "").replace("upload.php", "latency.txt")
     latencies = []
 
     for i in range(pings):
         request = build_request(url, headers=headers, bump=i)
-        start = time.perf_counter()
+        start = time.monotonic()
         uh, e = catch_request(request, opener=opener)
 
         if e or int(uh.code) != 200:
@@ -127,21 +131,21 @@ def _ping_server(
             latencies.append(3600.0)
             continue
 
-        latency = time.perf_counter() - start
+        latency = time.monotonic() - start
         latencies.append(latency)
         uh.close()
 
     avg_latency = sum(latencies) / len(latencies)
     server["latency"] = avg_latency
 
-    # time.perf_counter() returns seconds in float
+    # time.monotonic() returns seconds in float
     server["latency_ms"] = avg_latency * 1000.0
 
     return server, avg_latency
 
 
 def get_best_server(
-    closest_servers: list[dict[str, Any]], opener: Any
+    closest_servers: list[dict[str, Any]], opener: OpenerDirector
 ) -> dict[str, Any]:
     """
     Concurrently ping the closest servers to determine which has the lowest latency.
