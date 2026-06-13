@@ -49,34 +49,9 @@ def parse_args() -> argparse.Namespace:
         help="Use one concurrent connection. Simulates a typical file transfer.",
     )
     parser.add_argument(
-        "--no-download",
-        dest="no_download",
-        action="store_true",
-        help="Do not perform download test",
-    )
-    parser.add_argument(
-        "--no-upload",
-        dest="no_upload",
-        action="store_true",
-        help="Do not perform upload test",
-    )
-    parser.add_argument(
-        "--bytes",
-        dest="units",
-        action="store_const",
-        const=("byte", 8),
-        default=("bit", 1),
-        help="Display values in bytes instead of bits. Does not affect image generation or JSON/CSV output.",
-    )
-    parser.add_argument(
         "--share",
         action="store_true",
         help="Generate and provide a URL to the speedtest.net share results image.",
-    )
-    parser.add_argument(
-        "--simple",
-        action="store_true",
-        help="Suppress verbose output, only show basic information",
     )
     parser.add_argument(
         "--csv",
@@ -95,9 +70,29 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s.",
     )
-    parser.add_argument("--source", help="Source IP address to bind to")
+    parser.add_argument(
+        "--bytes",
+        dest="units",
+        action="store_const",
+        const=("byte", 8),
+        default=("bit", 1),
+        help="Display values in bytes instead of bits. Does not affect image generation or JSON/CSV output.",
+    )
+    parser.add_argument("--source", help="Bind a source IP address to bind to")
     parser.add_argument(
         "--timeout", default=10, type=float, help="HTTP timeout in seconds."
+    )
+    parser.add_argument(
+        "--no-download",
+        dest="no_download",
+        action="store_true",
+        help="Do not perform download test",
+    )
+    parser.add_argument(
+        "--no-upload",
+        dest="no_upload",
+        action="store_true",
+        help="Do not perform upload test",
     )
     parser.add_argument(
         "--no-pre-allocate",
