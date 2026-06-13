@@ -52,9 +52,6 @@ def shell() -> int:
     if args.csv_header:
         return csv_header(args.csv_delimiter)
 
-    # state variables
-    machine_format = bool(args.csv or args.json)
-    
     threads = 1 if args.single else args.threads
 
     # initialize
@@ -79,6 +76,6 @@ def shell() -> int:
 
     run_transfer_tests(st, args)
 
-    display_results(results, args, machine_format)
+    display_results(results, args)
 
     return ExitStatus.SUCCESS

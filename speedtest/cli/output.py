@@ -24,29 +24,19 @@ def csv_header(delimiter: str = ",") -> int:
     return ExitStatus.SUCCESS
 
 
-def display_results(
-    results: SpeedtestResults, args: argparse.Namespace, machine_format: bool
-) -> None:
+def display_results(results: SpeedtestResults, args: argparse.Namespace) -> None:
     """Render the final output to the user based on requested format (JSON, CSV, Text)."""
 
     logger.debug(f"Results:\n{results.dict()!r}")
 
     # force a share link generation if requested before formatted output
-    if not args.simple and args.share:
+    if args.share:
         results.share()
 
-    if args.simple:
-        download_speed = convert_speed(results.download, args.units[1])
-        upload_speed = convert_speed(results.upload, args.units[1])
-        logger.info(
-            f"Ping: {results.ping:.4f} ms\n"
-            f"Download: {download_speed:.2f} M{args.units[0]}/s\n"
-            f"Upload: {upload_speed:.2f} M{args.units[0]}/s"
-        )
-    elif args.csv:
+    if args.csv:
         logger.info(results.csv(delimiter=args.csv_delimiter))
     elif args.json:
         logger.info(results.json())
 
-    if args.share and not machine_format:
+    if args.share and not (args.csv or args.json):
         logger.info(f"Share results: {results.share()}")
