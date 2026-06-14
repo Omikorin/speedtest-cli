@@ -42,9 +42,6 @@ def _validate_args(args: argparse.Namespace) -> None:
     if args.no_download and args.no_upload:
         raise SpeedtestCLIError("Cannot supply both --no-download and --no-upload")
 
-    if len(args.csv_delimiter) != 1:
-        raise SpeedtestCLIError("--csv-delimiter must be a single character")
-
 
 def shell() -> int:
     """Run the full speedtest.net test orchestrator."""
@@ -65,7 +62,12 @@ def shell() -> int:
     # Initialize Core Pipeline
     logger.info("Retrieving speedtest.net configuration...")
 
-    st = get_speedtest_instance(args, threads=threads, shutdown_event=shutdown_event)
+    st = get_speedtest_instance(
+        source=args.source,
+        timeout=args.timeout,
+        threads=threads,
+        shutdown_event=shutdown_event,
+    )
 
     # Handle early-exit commands
     if args.list:
@@ -78,7 +80,7 @@ def shell() -> int:
         f"({client_cfg.get('ip', 'Unknown IP')})..."
     )
 
-    select_server(st, args)
+    select_server(st, server=args.server)
 
     server_cfg = st.results.server
     logger.info(
@@ -87,7 +89,13 @@ def shell() -> int:
         f"[{server_cfg.get('d', 0.0):.2f} km]: {st.results.ping:.4f} ms"
     )
 
-    run_transfer_tests(st, args)
+    run_transfer_tests(
+        st,
+        no_download=args.no_download,
+        no_upload=args.no_upload,
+        pre_allocate=not args.no_pre_allocate,
+        units=args.units,
+    )
     display_results(st.results, args)
 
     return ExitStatus.SUCCESS.value

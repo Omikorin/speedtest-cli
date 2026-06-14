@@ -10,8 +10,7 @@ __all__ = [
     "SpeedtestServersError",
     "ConfigRetrievalError",
     "ServersRetrievalError",
-    "InvalidServerIDType",
-    "NoMatchedServers",
+    "NoMatchedServer",
     "ShareResultsConnectFailure",
     "ShareResultsSubmitFailure",
     "SpeedtestUploadTimeout",
@@ -48,12 +47,8 @@ class ServersRetrievalError(SpeedtestHTTPError):
     """Could not retrieve speedtest-servers.php."""
 
 
-class InvalidServerIDType(SpeedtestException):
-    """Server ID used for filtering was not an integer."""
-
-
-class NoMatchedServers(SpeedtestException):
-    """No servers matched when filtering."""
+class NoMatchedServer(SpeedtestException):
+    """No server matched when filtering."""
 
 
 class ShareResultsConnectFailure(SpeedtestException):

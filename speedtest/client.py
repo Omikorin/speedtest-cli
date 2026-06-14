@@ -5,7 +5,7 @@ from speedtest.engine.config import fetch_config
 from speedtest.engine.results import SpeedtestResults
 from speedtest.engine.servers import fetch_servers, get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
-from speedtest.exceptions import NoMatchedServers
+from speedtest.exceptions import NoMatchedServer
 from speedtest.http.handlers import build_opener
 
 __all__ = ["Speedtest"]
@@ -55,11 +55,11 @@ class Speedtest:
         return self._best
 
     def get_servers(
-        self, servers: list[int] | None = None
+        self, server: int | None = None
     ) -> dict[float, list[dict[str, Any]]]:
         """
         Fetch the server list from speedtest.net, sort them by distance,
-        and optionally filter down to a specified subset of IDs.
+        and optionally filter down to a specific server ID.
         """
 
         ignore = self.config.get("ignore_servers", [])
@@ -73,18 +73,15 @@ class Speedtest:
         # flatten the distance-grouped dict into a clean linear list sorted by proximity
         sorted_distances = sorted(self.servers.keys())
         self.closest = [
-            server for distance in sorted_distances for server in self.servers[distance]
+            srv for distance in sorted_distances for srv in self.servers[distance]
         ]
 
-        # filter by specific server IDs if requested
-        if servers:
-            target_ids = {int(s) for s in servers}
-            self.closest = [
-                s for s in self.closest if int(s.get("id", 0)) in target_ids
-            ]
+        # filter by a specific server ID if requested
+        if server is not None:
+            self.closest = [s for s in self.closest if int(s.get("id", 0)) == server]
 
             if not self.closest:
-                raise NoMatchedServers(f"No servers matched the criteria: {servers}")
+                raise NoMatchedServer(f"No server matched the ID: {server}")
 
         return self.servers
 
