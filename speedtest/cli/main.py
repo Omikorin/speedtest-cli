@@ -95,7 +95,6 @@ def shell() -> int:
         st,
         no_download=args.no_download,
         no_upload=args.no_upload,
-        pre_allocate=not args.no_pre_allocate,
         units=args.units,
     )
     display_results(

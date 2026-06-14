@@ -31,8 +31,8 @@ def main() -> int:
 
         return int(code)
 
-    except Exception as _e:
-        logger.exception("An unexpected error occurred.")
+    except Exception as e:
+        logger.exception("An unexpected error occurred.", e)
         return ExitStatus.ERROR.value
 
 

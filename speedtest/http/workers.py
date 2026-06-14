@@ -1,13 +1,12 @@
 """
-Threadpool worker functions and payload data classes
+Threadpool worker functions and payload data classes.
 """
 
 import threading
 import time
-from io import BytesIO
 from urllib.request import OpenerDirector, Request, urlopen
 
-from speedtest.exceptions import SpeedtestCLIError, SpeedtestUploadTimeout
+from speedtest.exceptions import SpeedtestUploadTimeout
 from speedtest.http.errors import HTTP_ERRORS, UPLOAD_ERRORS
 
 __all__ = [
@@ -18,8 +17,10 @@ __all__ = [
 
 # --- Constants ---
 CHUNK_SIZE_BYTES = 10240
-PAYLOAD_MULTIPLIER = 36.0
 UPLOAD_RESPONSE_TRUNCATION = 11
+
+# A pre-calculated 10.5 KB chunk to satisfy typical urllib read calls
+DUMMY_CHUNK = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 300
 
 
 def download_worker(
@@ -33,15 +34,14 @@ def download_worker(
 
     _opener = opener.open if opener else urlopen
     _shutdown_event = shutdown_event or threading.Event()
+
     total_downloaded = 0
+    deadline = start_time + timeout
 
     try:
-        if (time.monotonic() - start_time) <= timeout:
+        if time.monotonic() <= deadline:
             with _opener(request) as response:
-                while (
-                    not _shutdown_event.is_set()
-                    and (time.monotonic() - start_time) <= timeout
-                ):
+                while not _shutdown_event.is_set() and time.monotonic() <= deadline:
                     chunk = response.read(CHUNK_SIZE_BYTES)
                     if not chunk:
                         break
@@ -54,7 +54,9 @@ def download_worker(
 
 
 class HTTPUploaderData:
-    """File-like object to cleanly truncate the upload once the timeout is reached."""
+    """
+    File-like object to stream dummy data for uploads with O(1) memory footprint.
+    """
 
     def __init__(
         self,
@@ -67,36 +69,34 @@ class HTTPUploaderData:
         self.start_time = start_time
         self.timeout = timeout
         self._shutdown_event = shutdown_event or threading.Event()
-        self._data: BytesIO | None = None
         self.total_bytes_read = 0
 
-    def pre_allocate(self) -> None:
-        chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        multiplier = int(round(self.length / PAYLOAD_MULTIPLIER))
-
-        try:
-            payload = f"content1={(chars * multiplier)[: self.length - 9]}".encode()
-            self._data = BytesIO(payload)
-        except MemoryError:
-            raise SpeedtestCLIError(
-                "Insufficient memory to pre-allocate upload data. Please use --no-pre-allocate"
-            )
-
     @property
-    def data(self) -> BytesIO:
-        if not self._data:
-            self.pre_allocate()
-        return self._data
+    def deadline(self) -> float:
+        """Dynamically compute the deadline so it respects external start_time updates."""
 
-    def read(self, n: int = CHUNK_SIZE_BYTES) -> bytes:
-        if (
-            time.monotonic() - self.start_time
-        ) <= self.timeout and not self._shutdown_event.is_set():
-            chunk = self.data.read(n)
-            self.total_bytes_read += len(chunk)
-            return chunk
+        return self.start_time + self.timeout
 
-        raise SpeedtestUploadTimeout()
+    def read(self, n: int = -1) -> bytes:
+        """Yield dynamic chunks of dummy data until length or timeout is reached."""
+
+        if time.monotonic() > self.deadline or self._shutdown_event.is_set():
+            raise SpeedtestUploadTimeout()
+
+        remaining = self.length - self.total_bytes_read
+        if remaining <= 0:
+            return b""
+
+        # If n is negative or larger than remaining, read everything left.
+        read_size = remaining if (n < 0 or n > remaining) else n
+
+        if read_size <= len(DUMMY_CHUNK):
+            chunk = DUMMY_CHUNK[:read_size]
+        else:
+            chunk = b"A" * read_size
+
+        self.total_bytes_read += len(chunk)
+        return chunk
 
     def __len__(self) -> int:
         return self.length
@@ -115,15 +115,14 @@ def upload_worker(
     _shutdown_event = shutdown_event or threading.Event()
 
     request.data = payload_data
+    request.method = "POST"
 
     try:
-        if (
-            time.monotonic() - payload_data.start_time
-        ) <= timeout and not _shutdown_event.is_set():
+        if time.monotonic() <= payload_data.deadline and not _shutdown_event.is_set():
             with _opener(request) as response:
                 response.read(UPLOAD_RESPONSE_TRUNCATION)
             return payload_data.total_bytes_read
+
         return 0
     except UPLOAD_ERRORS:
-        # Fallback to the amount of bytes we successfully managed to upload before crash/timeout
         return payload_data.total_bytes_read

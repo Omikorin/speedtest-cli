@@ -59,11 +59,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not perform the upload test.",
     )
-    transfer_group.add_argument(
-        "--no-pre-allocate",
-        action="store_true",
-        help="Do not pre-allocate upload data. Disable to avoid MemoryErrors on low-memory systems.",
-    )
 
     threads_group = transfer_group.add_mutually_exclusive_group()
     threads_group.add_argument(
