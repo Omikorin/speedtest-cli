@@ -1,11 +1,12 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=80.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedtest-cli"
 dynamic = ["version"]
 authors = [
+    {name = "Matt Martz", email = "matt@sivel.net"},
     {name = "Michał Korczak", email = "git@omikor.in"}
 ]
 license = "Apache-2.0"
@@ -20,7 +21,6 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: System :: Networking",
     "Topic :: Terminals",
@@ -35,7 +35,7 @@ GitHub = "https://github.com/Omikorin/speedtest-cli"
 speedtest = "speedtest.__main__:main"
 speedtest-cli = "speedtest.__main__:main"
 
-# Tool-specific configurations (Setuptools helpers)
+# Tool-specific configurations
 [tool.setuptools.packages.find]
 include = ["speedtest", "speedtest.*"]
 
@@ -44,3 +44,44 @@ version = {attr = "speedtest.__version__"}
 
 [tool.setuptools.data-files]
 "share/man/man1" = ["extras/man/speedtest-cli.1"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.0",
+    "pyright>=1.1.400",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["speedtest", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (automatically sorts imports)
+    "UP",  # pyupgrade (automatically upgrades syntax to modern Python 3.12 standards)
+    "RUF", # ruff-specific rules
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+include = ["speedtest", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard" # Can be bumped to "strict" once codebase is fully annotated
+useLibraryCodeForTypes = true
+reportMissingImports = true
+
+[tool.pytest]
+minversion = "9.0"
+# Automatically show extra test info, fail if coverage drops, and output a terminal coverage report
+addopts = "-v --cov=speedtest --cov-report=term-missing"
+testpaths = ["tests"]
