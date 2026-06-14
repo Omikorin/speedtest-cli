@@ -1,10 +1,10 @@
 """
-The main entry point of shell
+The main entry point of the CLI shell.
 """
 
+import argparse
 import signal
 import threading
-from collections.abc import Callable
 from typing import Any
 
 from speedtest.cli.commands import (
@@ -22,60 +22,72 @@ from speedtest.utils.status import ExitStatus
 __all__ = ["shell"]
 
 
-def ctrl_c(shutdown_event: threading.Event) -> Callable[[int, Any], None]:
-    """Catch Ctrl-C key sequence and set a SHUTDOWN_EVENT for our threaded operations."""
+def _register_shutdown_handler() -> threading.Event:
+    """Register a SIGINT handler and return the associated shutdown event."""
 
-    def inner(signum: int, frame: Any) -> None:
+    shutdown_event = threading.Event()
+
+    def _handler(signum: int, frame: Any) -> None:
         shutdown_event.set()
         logger.warning("\nStopping speedtest-cli...")
         raise KeyboardInterrupt
 
-    return inner
+    signal.signal(signal.SIGINT, _handler)
+    return shutdown_event
 
 
-def shell() -> int:
-    """Run the full speedtest.net test orchestrator."""
+def _validate_args(args: argparse.Namespace) -> None:
+    """Perform pre-flight validation on CLI arguments."""
 
-    shutdown_event = threading.Event()
-    signal.signal(signal.SIGINT, ctrl_c(shutdown_event))
-
-    args = parse_args()
-    setup_logging(debug=args.debug)
-
-    # pre-flight checks
     if args.no_download and args.no_upload:
         raise SpeedtestCLIError("Cannot supply both --no-download and --no-upload")
 
     if len(args.csv_delimiter) != 1:
         raise SpeedtestCLIError("--csv-delimiter must be a single character")
 
+
+def shell() -> int:
+    """Run the full speedtest.net test orchestrator."""
+
+    args = parse_args()
+    setup_logging(debug=args.debug)
+
+    _validate_args(args)
+
     if args.csv_header:
         return csv_header(args.csv_delimiter)
 
+    # Setup graceful shutdown for threads
+    shutdown_event = _register_shutdown_handler()
+
     threads = 1 if args.single else args.threads
 
-    # initialize
+    # Initialize Core Pipeline
     logger.info("Retrieving speedtest.net configuration...")
-    st = get_speedtest_instance(args, threads=threads)
 
+    st = get_speedtest_instance(args, threads=threads, shutdown_event=shutdown_event)
+
+    # Handle early-exit commands
     if args.list:
         return handle_server_list(st)
 
+    # Execute Standard Pipeline
+    client_cfg = st.config.get("client", {})
     logger.info(
-        f"Testing from {st.config['client']['isp']} ({st.config['client']['ip']})..."
+        f"Testing from {client_cfg.get('isp', 'Unknown ISP')} "
+        f"({client_cfg.get('ip', 'Unknown IP')})..."
     )
 
-    # select server
     select_server(st, args)
 
-    results = st.results
+    server_cfg = st.results.server
     logger.info(
-        f"Hosted by {results.server['sponsor']} ({results.server['name']}) "
-        f"[{results.server['d']:.2f} km]: {results.ping:.4f} ms"
+        f"Hosted by {server_cfg.get('sponsor', 'Unknown')} "
+        f"({server_cfg.get('name', 'Unknown')}) "
+        f"[{server_cfg.get('d', 0.0):.2f} km]: {st.results.ping:.4f} ms"
     )
 
     run_transfer_tests(st, args)
+    display_results(st.results, args)
 
-    display_results(results, args)
-
-    return ExitStatus.SUCCESS
+    return ExitStatus.SUCCESS.value
