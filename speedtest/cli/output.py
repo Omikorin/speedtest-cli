@@ -1,42 +1,46 @@
 """
-Handles formatting, printing, and CSV/JSON output
+Handles formatting, printing, and CSV/JSON output.
 """
 
-import argparse
-
-from speedtest.utils.logger import logger
 from speedtest.engine.results import SpeedtestResults
+from speedtest.utils.logger import logger
 from speedtest.utils.status import ExitStatus
 
 __all__ = ["convert_speed", "csv_header", "display_results"]
 
 
 def convert_speed(speed_bps: float, unit_divisor: int) -> float:
-    """Convert speed from bits per second to the requested unit (Mega/s)."""
+    """Convert speed from bits per second to the requested unit (e.g., Mega/s)."""
 
     return (speed_bps / 1_000_000) / unit_divisor
 
 
 def csv_header(delimiter: str = ",") -> int:
-    """Print the CSV Headers."""
+    """Print the CSV Headers and return a successful exit status."""
 
     logger.info(SpeedtestResults.csv_header(delimiter=delimiter))
-    return ExitStatus.SUCCESS
+    return ExitStatus.SUCCESS.value
 
 
-def display_results(results: SpeedtestResults, args: argparse.Namespace) -> None:
+def display_results(
+    results: SpeedtestResults,
+    csv_format: bool = False,
+    json_format: bool = False,
+    csv_delimiter: str = ",",
+    share: bool = False,
+) -> None:
     """Render the final output to the user based on requested format (JSON, CSV, Text)."""
 
     logger.debug(f"Results:\n{results.dict()!r}")
 
-    # force a share link generation if requested before formatted output
-    if args.share:
-        results.share()
+    share_link = None
+    if share:
+        share_link = results.share()
 
-    if args.csv:
-        logger.info(results.csv(delimiter=args.csv_delimiter))
-    elif args.json:
+    if csv_format:
+        logger.info(results.csv(delimiter=csv_delimiter))
+    elif json_format:
         logger.info(results.json())
 
-    if args.share and not (args.csv or args.json):
-        logger.info(f"Share results: {results.share()}")
+    if share and not (csv_format or json_format):
+        logger.info(f"Share results: {share_link}")

@@ -96,6 +96,12 @@ def shell() -> int:
         pre_allocate=not args.no_pre_allocate,
         units=args.units,
     )
-    display_results(st.results, args)
+    display_results(
+        results=st.results,
+        csv_format=args.csv,
+        json_format=args.json,
+        csv_delimiter=args.csv_delimiter,
+        share=args.share,
+    )
 
     return ExitStatus.SUCCESS.value
