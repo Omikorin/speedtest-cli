@@ -1,3 +1,7 @@
+"""
+Manages the aggregation, formatting, and submission of speedtest results.
+"""
+
 import csv
 import json
 from datetime import datetime, timezone
@@ -5,6 +9,7 @@ from hashlib import md5
 from io import StringIO
 from typing import Any
 from urllib.parse import parse_qs, urlencode
+from urllib.request import OpenerDirector
 
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
 from speedtest.http.handlers import build_opener
@@ -34,7 +39,7 @@ class SpeedtestResults:
         ping: float = 0.0,
         server: dict[str, Any] | None = None,
         client: dict[str, str] | None = None,
-        opener: Any = None,
+        opener: OpenerDirector | None = None,
     ):
         self.download = download
         self.upload = upload
@@ -44,20 +49,20 @@ class SpeedtestResults:
 
         self._share: str | None = None
 
-        # generate a clean ISO 8601 UTC timestamp
+        # Generate a clean ISO 8601 UTC timestamp
         self.timestamp = (
             datetime.now(timezone.utc)
             .isoformat(timespec="microseconds")
             .replace("+00:00", "Z")
         )
 
-        self.bytes_received = 0
-        self.bytes_sent = 0
+        self.bytes_received: int = 0
+        self.bytes_sent: int = 0
 
         self._opener = opener or build_opener()
 
     def __repr__(self) -> str:
-        return repr(self.dict())
+        return repr(self.to_dict())
 
     def share(self) -> str:
         """POST data to the speedtest.net API to obtain a share results link."""
@@ -102,20 +107,22 @@ class SpeedtestResults:
         )
 
         f, e = catch_request(request, opener=self._opener)
-        if e:
-            raise ShareResultsConnectFailure(e)
 
-        try:
-            # capture code before reading to avoid UnboundLocalError
-            code = int(f.code)
+        if e or not f:
+            raise ShareResultsConnectFailure(e or "Failed to connect to Share API")
+
+        # Context manager strictly handles network cleanup
+        with f:
+            code = int(getattr(f, "code", 500))
+            if code != 200:
+                raise ShareResultsSubmitFailure(
+                    f"Could not submit results. HTTP {code}"
+                )
+
             response = f.read()
-        finally:
-            f.close()
 
-        if code != 200:
-            raise ShareResultsSubmitFailure(f"Could not submit results. HTTP {code}")
-
-        qsargs = parse_qs(response.decode())
+        # Safely decode ignoring corrupted bytes
+        qsargs = parse_qs(response.decode(errors="ignore"))
         resultid = qsargs.get("resultid")
 
         if not resultid or len(resultid) != 1:
@@ -126,8 +133,8 @@ class SpeedtestResults:
         self._share = f"https://www.speedtest.net/result/{resultid[0]}.png"
         return self._share
 
-    def dict(self) -> dict[str, Any]:
-        """Return dictionary of result data."""
+    def to_dict(self) -> dict[str, Any]:
+        """Return dictionary of result data cleanly formatted."""
 
         return {
             "download": self.download,
@@ -159,7 +166,6 @@ class SpeedtestResults:
         ]
 
         out = StringIO()
-
         writer = csv.writer(out, delimiter=delimiter, lineterminator="")
         writer.writerow(row)
 
@@ -168,17 +174,18 @@ class SpeedtestResults:
     def csv(self, delimiter: str = ",") -> str:
         """Return data in CSV format."""
 
-        data = self.dict()
+        data = self.to_dict()
+        server = data.get("server", {})
 
         row = [
-            data["server"].get("id", ""),
-            data["server"].get("sponsor", ""),
-            data["server"].get("name", ""),
-            data["timestamp"],
-            data["server"].get("d", ""),
-            data["ping"],
-            data["download"],
-            data["upload"],
+            server.get("id", ""),
+            server.get("sponsor", ""),
+            server.get("name", ""),
+            data.get("timestamp", ""),
+            server.get("d", ""),
+            data.get("ping", ""),
+            data.get("download", ""),
+            data.get("upload", ""),
             self._share or "",
             self.client.get("ip", ""),
         ]
@@ -193,4 +200,4 @@ class SpeedtestResults:
         """Return data in JSON format."""
 
         kwargs: dict[str, Any] = {"indent": 4, "sort_keys": True} if pretty else {}
-        return json.dumps(self.dict(), **kwargs)
+        return json.dumps(self.to_dict(), **kwargs)
