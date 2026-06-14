@@ -5,7 +5,7 @@ from speedtest.engine.config import fetch_config
 from speedtest.engine.results import SpeedtestResults
 from speedtest.engine.servers import fetch_servers, get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
-from speedtest.exceptions import NoMatchedServer
+from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
 from speedtest.http.handlers import build_opener
 
 __all__ = ["Speedtest"]
@@ -19,7 +19,7 @@ class Speedtest:
         config: dict[str, Any] | None = None,
         source_address: str | None = None,
         timeout: float = 10.0,
-        shutdown_event: Any = None,
+        shutdown_event: threading.Event | None = None,
         threads: int | None = None,
     ):
         self._source_address = source_address
@@ -29,14 +29,14 @@ class Speedtest:
 
         self._opener = build_opener(source_address, timeout)
 
-        # fetch default configuration and merge optional overrides
-        self.config = fetch_config(self._opener)
-        if config is not None:
+        # Fetch default configuration and safely merge optional overrides
+        self.config = fetch_config(self._opener) or {}
+        if config:
             self.config.update(config)
 
-        self.lat_lon = self.config.get("lat_lon", (0.0, 0.0))
+        self.lat_lon = self.config.get("lat_lon") or (0.0, 0.0)
 
-        # core state data structures
+        # Core state data structures
         self.servers: dict[float, list[dict[str, Any]]] = {}
         self.closest: list[dict[str, Any]] = []
         self._best: dict[str, Any] = {}
@@ -70,13 +70,13 @@ class Speedtest:
             ignore_servers=ignore,
         )
 
-        # flatten the distance-grouped dict into a clean linear list sorted by proximity
+        # Flatten the distance-grouped dict into a clean linear list sorted by proximity
         sorted_distances = sorted(self.servers.keys())
         self.closest = [
             srv for distance in sorted_distances for srv in self.servers[distance]
         ]
 
-        # filter by a specific server ID if requested
+        # Filter by a specific server ID if requested
         if server is not None:
             self.closest = [s for s in self.closest if int(s.get("id", 0)) == server]
 
@@ -91,21 +91,31 @@ class Speedtest:
         if not self.closest:
             self.get_servers()
 
-        # isolate the closest N servers to avoid wasting execution time pinging distant servers
+        if not self.closest:
+            raise SpeedtestCLIError("No servers available to test against.")
+
+        # Isolate the closest N servers to avoid wasting execution time pinging distant servers
         candidates = self.closest[:limit]
 
         self._best = get_best_server(candidates, self._opener)
 
+        if not self._best:
+            raise SpeedtestCLIError("Failed to identify a valid best server.")
+
         self.results.server = self._best
-        self.results.ping = self._best["latency_ms"]
+        self.results.ping = self._best.get("latency_ms", 0.0)
 
         return self._best
 
     def download(self) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
+        best_url = self.best.get("url")
+        if not best_url:
+            raise SpeedtestCLIError("The best selected server is missing a valid URL.")
+
         bytes_received, download_speed = run_download_test(
-            best_server_url=self.best["url"],
+            best_server_url=best_url,
             config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
@@ -120,8 +130,12 @@ class Speedtest:
     def upload(self, pre_allocate: bool = True) -> float:
         """Test concurrent upload speed against the chosen optimal server."""
 
+        best_url = self.best.get("url")
+        if not best_url:
+            raise SpeedtestCLIError("The best selected server is missing a valid URL.")
+
         bytes_sent, upload_speed = run_upload_test(
-            best_server_url=self.best["url"],
+            best_server_url=best_url,
             config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
