@@ -84,7 +84,7 @@ def select_server(st: Speedtest, server: int | None = None) -> None:
         logger.error("Cannot retrieve speedtest server list")
         raise SpeedtestCLIError(e) from e
 
-    if server and len(server) == 1:
+    if server is not None:
         logger.info("Retrieving information for the selected server...")
     else:
         logger.info("Selecting best server based on ping...")
