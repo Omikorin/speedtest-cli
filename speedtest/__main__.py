@@ -4,31 +4,36 @@ The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 
 import sys
 
+from speedtest.cli.main import shell
 from speedtest.exceptions import SpeedtestException
 from speedtest.utils.logger import logger
 from speedtest.utils.status import ExitStatus
 
 
 def main() -> int:
-    try:
-        from speedtest.cli.main import shell
+    """Execute the CLI and return an integer exit status."""
 
+    try:
         exit_status = shell()
+
+        return int(exit_status)
 
     except KeyboardInterrupt:
         logger.error("Stopped by user")
-        exit_status = ExitStatus.ERROR_CTRL_C
+        return ExitStatus.ERROR_CTRL_C.value
 
     except SpeedtestException as e:
-        code = getattr(e, "code", 1)
+        code = getattr(e, "code", ExitStatus.ERROR.value)
 
-        if code not in (ExitStatus.SUCCESS, ExitStatus.ERROR_CTRL_C):
+        if code not in (ExitStatus.SUCCESS.value, ExitStatus.ERROR_CTRL_C.value):
             msg = str(e) or repr(e)
-            raise SystemExit(f"ERROR: {msg}") from e
+            logger.error(f"ERROR: {msg}")
 
-        exit_status = code
+        return int(code)
 
-    return getattr(exit_status, "value", exit_status)
+    except Exception as _e:
+        logger.exception("An unexpected error occurred.")
+        return ExitStatus.ERROR.value
 
 
 if __name__ == "__main__":
