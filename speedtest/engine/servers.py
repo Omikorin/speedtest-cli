@@ -1,6 +1,11 @@
+"""
+Handles fetching, distance calculation, and latency ranking of speedtest.net servers.
+"""
+
 import math
 import time
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from urllib.request import OpenerDirector
@@ -36,9 +41,9 @@ def _calculate_distance(
 
 
 def fetch_servers(
-    opener: Any,
+    opener: OpenerDirector,
     lat_lon: tuple[float, float],
-    ignore_servers: list[int] = None,
+    ignore_servers: list[int] | None = None,
 ) -> dict[float, list[dict[str, Any]]]:
     """
     Fetch the server list from speedtest.net, parse the XML, calculate
@@ -51,21 +56,24 @@ def fetch_servers(
         "https://www.speedtest.net/speedtest-servers-static.php",
     ]
 
-    servers: dict[float, list[dict[str, Any]]] = {}
+    servers_dict: defaultdict[float, list[dict[str, Any]]] = defaultdict(list)
 
     for url in urls:
         request = build_request(url)
         uh, e = catch_request(request, opener=opener)
-        if e:
+
+        if e or not uh:
             continue
 
-        stream = get_response_stream(uh)
-        serversxml = stream.read()
-        stream.close()
-        uh.close()
+        with uh:
+            if int(getattr(uh, "code", 500)) != 200:
+                continue
 
-        if int(uh.code) != 200:
-            continue
+            try:
+                with get_response_stream(uh) as stream:
+                    serversxml = stream.read()
+            except (OSError, EOFError):
+                continue
 
         logger.debug(f"Servers XML:\n{serversxml.decode(errors='ignore')}")
 
@@ -78,63 +86,71 @@ def fetch_servers(
             attrib = server.attrib
             server_id = int(attrib.get("id", 0))
 
-            if server_id in ignore_servers:
+            if not server_id or server_id in ignore_servers:
                 continue
 
             try:
-                server_lat_lon = (float(attrib.get("lat")), float(attrib.get("lon")))
+                lat_str, lon_str = attrib.get("lat"), attrib.get("lon")
+                if not lat_str or not lon_str:
+                    continue
+
+                server_lat_lon = (float(lat_str), float(lon_str))
                 distance = _calculate_distance(lat_lon, server_lat_lon)
             except (ValueError, TypeError):
                 continue
 
             attrib["d"] = distance
+            servers_dict[distance].append(attrib)
 
-            if distance not in servers:
-                servers[distance] = []
-            servers[distance].append(attrib)
-
-        # if we successfully parsed servers from this URL, stop trying fallbacks
-        if servers:
+        if servers_dict:
             break
 
-    if not servers:
+    if not servers_dict:
         raise ServersRetrievalError(
             "Failed to retrieve or parse speedtest server list."
         )
 
-    logger.debug(f"Discovered {sum(len(s) for s in servers.values())} servers.")
-    return servers
+    logger.debug(f"Discovered {sum(len(s) for s in servers_dict.values())} servers.")
+
+    return dict(servers_dict)
 
 
 def _ping_server(
     server: dict[str, Any],
     opener: OpenerDirector,
-    headers: dict[str, Any] = {},
+    headers: dict[str, Any] | None = None,
     pings: int = 3,
 ) -> tuple[dict[str, Any], float]:
     """Ping a single server multiple times and return the average latency."""
 
+    headers = headers or {}
     url: str = server.get("url", "").replace("upload.php", "latency.txt")
+
+    if not url:
+        return server, 3600.0
+
     latencies = []
 
     for i in range(pings):
         request = build_request(url, headers=headers, bump=i)
         start = time.monotonic()
+
         uh, e = catch_request(request, opener=opener)
 
-        if e or int(uh.code) != 200:
-            # high penalty for failed pings
+        if e or not uh:
             latencies.append(3600.0)
             continue
 
-        latency = time.monotonic() - start
-        latencies.append(latency)
-        uh.close()
+        with uh:
+            if int(getattr(uh, "code", 500)) != 200:
+                latencies.append(3600.0)
+                continue
+
+            latency = time.monotonic() - start
+            latencies.append(latency)
 
     avg_latency = sum(latencies) / len(latencies)
     server["latency"] = avg_latency
-
-    # time.monotonic() returns seconds in float
     server["latency_ms"] = avg_latency * 1000.0
 
     return server, avg_latency
@@ -175,7 +191,7 @@ def get_best_server(
 
     logger.debug(
         f"Best server selected: {best_server.get('sponsor')} "
-        f"({best_server.get('name')}) with latency {best_server.get('latency_ms'):.4f} ms"
+        f"({best_server.get('name')}) with latency {best_server.get('latency_ms', 0.0):.4f} ms"
     )
 
     return best_server
