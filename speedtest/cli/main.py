@@ -47,7 +47,9 @@ def shell() -> int:
     """Run the full speedtest.net test orchestrator."""
 
     args = parse_args()
-    setup_logging(debug=args.debug)
+
+    is_quiet: bool = args.csv or args.json or args.csv_header
+    setup_logging(debug=args.debug, quiet=is_quiet)
 
     _validate_args(args)
 

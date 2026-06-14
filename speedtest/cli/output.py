@@ -18,7 +18,7 @@ def convert_speed(speed_bps: float, unit_divisor: int) -> float:
 def csv_header(delimiter: str = ",") -> int:
     """Print the CSV Headers and return a successful exit status."""
 
-    logger.info(SpeedtestResults.csv_header(delimiter=delimiter))
+    print(SpeedtestResults.csv_header(delimiter=delimiter))
     return ExitStatus.SUCCESS.value
 
 
@@ -38,9 +38,9 @@ def display_results(
         share_link = results.share()
 
     if csv_format:
-        logger.info(results.csv(delimiter=csv_delimiter))
+        print(results.csv(delimiter=csv_delimiter))
     elif json_format:
-        logger.info(results.json())
+        print(results.json())
 
     if share and not (csv_format or json_format):
-        logger.info(f"Share results: {share_link}")
+        print(f"Share results: {share_link}")
