@@ -1,3 +1,7 @@
+"""
+Global logging configuration for the CLI.
+"""
+
 import logging
 import sys
 
@@ -19,9 +23,10 @@ class CLIColoredFormatter(logging.Formatter):
         message = record.getMessage()
 
         if record.levelno == logging.DEBUG:
-            if sys.stdout.isatty():
+            # Safely fetch the stream attached to this formatter, fallback to stdout
+            stream = getattr(self, "stream", sys.stdout)
+            if hasattr(stream, "isatty") and stream.isatty():
                 return f"{self.GREY_COLOR}DEBUG: {message}{self.RESET_COLOR}"
-
             return f"DEBUG: {message}"
 
         return message
@@ -38,7 +43,7 @@ class MaxLevelFilter(logging.Filter):
         return record.levelno <= self.max_level
 
 
-def setup_logging(debug: bool = False) -> None:
+def setup_logging(debug: bool = False, quiet: bool = False) -> None:
     """
     Configures the global logging pipeline infrastructure.
     Separates stdout/stderr streams and attaches custom formatting options.
@@ -46,18 +51,29 @@ def setup_logging(debug: bool = False) -> None:
 
     logger.handlers.clear()
 
-    logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    if debug:
+        level = logging.DEBUG
+    elif quiet:
+        level = logging.WARNING
+    else:
+        level = logging.INFO
+
+    logger.setLevel(level)
 
     # Route DEBUG & INFO messages cleanly to stdout
     stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_formatter = CLIColoredFormatter()
+    stdout_formatter.stream = sys.stdout  # Bind stream for isatty() check
+    stdout_handler.setFormatter(stdout_formatter)
     stdout_handler.setLevel(logging.DEBUG)
     stdout_handler.addFilter(MaxLevelFilter(logging.INFO))
-    stdout_handler.setFormatter(CLIColoredFormatter())
 
     # Route WARNING, ERROR & CRITICAL messages cleanly to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_formatter = CLIColoredFormatter()
+    stderr_formatter.stream = sys.stderr
+    stderr_handler.setFormatter(stderr_formatter)
     stderr_handler.setLevel(logging.WARNING)
-    stderr_handler.setFormatter(CLIColoredFormatter())
 
     logger.addHandler(stdout_handler)
     logger.addHandler(stderr_handler)

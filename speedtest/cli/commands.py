@@ -65,7 +65,7 @@ def handle_server_list(st: Speedtest) -> int:
                     f"({server.get('name', 'Unknown')}, {server.get('country', 'Unknown')}) "
                     f"[{server.get('d', 0.0):.2f} km]"
                 )
-                logger.info(line)
+                print(line)
     except BrokenPipeError:
         pass
 
