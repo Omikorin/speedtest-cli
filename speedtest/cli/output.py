@@ -28,7 +28,7 @@ def display_results(
     json_format: bool = False,
     csv_delimiter: str = ",",
     share: bool = False,
-) -> None: 
+) -> None:
     """Render the final output to the user based on requested format (JSON, CSV, Text)."""
 
     logger.debug(f"Results:\n{results.to_dict()!r}")
