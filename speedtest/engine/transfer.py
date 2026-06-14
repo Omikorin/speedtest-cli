@@ -83,7 +83,6 @@ def run_upload_test(
     config: dict[str, Any],
     opener: OpenerDirector | None,
     shutdown_event: threading.Event | None,
-    pre_allocate: bool = True,
     threads: int | None = None,
 ) -> tuple[int, float]:
     """
@@ -114,9 +113,6 @@ def run_upload_test(
             timeout=test_length,
             shutdown_event=shutdown_event,
         )
-
-        if pre_allocate:
-            data.pre_allocate()
 
         headers = {"Content-length": str(size)}
         req = build_request(best_server_url, data, headers=headers)

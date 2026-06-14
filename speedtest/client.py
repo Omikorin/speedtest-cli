@@ -127,7 +127,7 @@ class Speedtest:
 
         return self.results.download
 
-    def upload(self, pre_allocate: bool = True) -> float:
+    def upload(self) -> float:
         """Test concurrent upload speed against the chosen optimal server."""
 
         best_url = self.best.get("url")
@@ -139,7 +139,6 @@ class Speedtest:
             config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
-            pre_allocate=pre_allocate,
             threads=self._threads,
         )
 

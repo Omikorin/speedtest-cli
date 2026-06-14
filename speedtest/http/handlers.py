@@ -1,8 +1,9 @@
 """
-Custom urllib handlers and the OpenerDirector builder
+Custom urllib handlers and the OpenerDirector builder.
 """
 
 import ssl
+from http.client import HTTPConnection, HTTPSConnection
 from typing import Any
 from urllib.request import (
     AbstractHTTPHandler,
@@ -13,12 +14,11 @@ from urllib.request import (
     ProxyHandler,
     Request,
 )
-
-from speedtest.http.connections import (
-    SpeedtestHTTPConnection,
-    SpeedtestHTTPSConnection,
-    build_connection,
+from urllib.request import (
+    build_opener as std_build_opener,
 )
+
+from speedtest.http.connections import build_connection
 from speedtest.http.request import build_user_agent
 from speedtest.utils.logger import logger
 
@@ -30,13 +30,13 @@ __all__ = [
 
 
 class SpeedtestHTTPHandler(AbstractHTTPHandler):
-    """Custom ``HTTPHandler`` that can build a ``HTTPConnection`` with the args we need."""
+    """Custom ``HTTPHandler`` that injects source_address and timeout into connections."""
 
     def __init__(
         self,
         debuglevel: int = 0,
         source_address: tuple[str, int] | None = None,
-        timeout: float = 10,
+        timeout: float = 10.0,
     ):
         super().__init__(debuglevel)
         self.source_address = source_address
@@ -44,9 +44,7 @@ class SpeedtestHTTPHandler(AbstractHTTPHandler):
 
     def http_open(self, req: Request) -> Any:
         return self.do_open(
-            build_connection(
-                SpeedtestHTTPConnection, self.source_address, self.timeout
-            ),
+            build_connection(HTTPConnection, self.source_address, self.timeout),
             req,
         )
 
@@ -54,24 +52,25 @@ class SpeedtestHTTPHandler(AbstractHTTPHandler):
 
 
 class SpeedtestHTTPSHandler(AbstractHTTPHandler):
-    """Custom ``HTTPSHandler`` that can build a ``HTTPSConnection`` with the args we need."""
+    """Custom ``HTTPSHandler`` that injects source_address, timeout, and SSL context."""
 
     def __init__(
         self,
         debuglevel: int = 0,
         context: ssl.SSLContext | None = None,
         source_address: tuple[str, int] | None = None,
-        timeout: float = 10,
+        timeout: float = 10.0,
     ):
         super().__init__(debuglevel)
-        self._context = context
+
+        self._context = context or ssl.create_default_context()
         self.source_address = source_address
         self.timeout = timeout
 
     def https_open(self, req: Request) -> Any:
         return self.do_open(
             build_connection(
-                SpeedtestHTTPSConnection,
+                HTTPSConnection,
                 self.source_address,
                 self.timeout,
                 context=self._context,
@@ -83,9 +82,9 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
 
 
 def build_opener(
-    source_address: str | None = None, timeout: float = 10
+    source_address: str | None = None, timeout: float = 10.0
 ) -> OpenerDirector:
-    """Build an ``OpenerDirector`` with explicit handlers."""
+    """Build an ``OpenerDirector`` with explicit custom handlers."""
 
     logger.debug(f"Timeout set to {timeout}")
 
@@ -102,10 +101,7 @@ def build_opener(
         HTTPErrorProcessor(),
     ]
 
-    opener = OpenerDirector()
+    opener = std_build_opener(*handlers)
     opener.addheaders = [("User-agent", build_user_agent())]
-
-    for handler in handlers:
-        opener.add_handler(handler)
 
     return opener

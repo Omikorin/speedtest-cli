@@ -1,26 +1,20 @@
 """
-Consolidated error tuples
+Consolidated exception tuples for network operations.
 """
 
 import ssl
-from http.client import BadStatusLine
-from urllib.error import HTTPError, URLError
+from http.client import HTTPException
 
 from speedtest.exceptions import SpeedtestUploadTimeout
 
-
 __all__ = [
+    "HTTP_ERRORS",
     "UPLOAD_ERRORS",
 ]
 
-
-# Consolidating errors (OSError inherently covers socket.error and IOError)
 HTTP_ERRORS = (
-    HTTPError,
-    URLError,
     OSError,
-    ssl.SSLError,
-    BadStatusLine,
+    HTTPException,
     ssl.CertificateError,
 )
 

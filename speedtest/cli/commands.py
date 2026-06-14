@@ -96,7 +96,6 @@ def run_transfer_tests(
     st: Speedtest,
     no_download: bool = False,
     no_upload: bool = False,
-    pre_allocate: bool = True,
     units: tuple[str, int] = ("bits", 1),
 ) -> None:
     """Execute download and upload test sequences."""
@@ -116,6 +115,6 @@ def run_transfer_tests(
         logger.info("Skipping upload test")
     else:
         logger.info("Testing upload speed")
-        st.upload(pre_allocate=pre_allocate)
+        st.upload()
         upload_speed = convert_speed(results.upload, unit_divisor)
         logger.info(f"Upload: {upload_speed:.2f} M{unit_name}/s")
