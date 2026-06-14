@@ -1,2 +1,2 @@
-# speedtest-cli-ng
+# speedtest-cli
 

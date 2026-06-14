@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     description = (
         "Command line interface for testing internet bandwidth using speedtest.net.\n"
         "--------------------------------------------------------------------------\n"
-        "https://github.com/Omikorin/speedtest-cli-ng"
+        "https://github.com/Omikorin/speedtest-cli"
     )
 
     parser = argparse.ArgumentParser(

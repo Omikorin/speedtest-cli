@@ -1,5 +1,5 @@
 """
-speedtest-cli-ng: Command line interface for testing internet bandwidth using speedtest.net
+speedtest-cli: Command line interface for testing internet bandwidth using speedtest.net
 
 This project is a continuation/fork of the original "speedtest-cli" by Matt Martz.
 
