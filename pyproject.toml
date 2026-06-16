@@ -10,7 +10,7 @@ authors = [
     {name = "Michał Korczak", email = "git@omikor.in"}
 ]
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 description = "Command line interface for testing internet bandwidth using speedtest.net"
 readme = "README.md"
 requires-python = ">=3.12"
