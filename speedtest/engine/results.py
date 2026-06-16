@@ -4,7 +4,7 @@ Manages the aggregation, formatting, and submission of speedtest results.
 
 import csv
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import md5
 from io import StringIO
 from typing import Any
@@ -51,9 +51,7 @@ class SpeedtestResults:
 
         # Generate a clean ISO 8601 UTC timestamp
         self.timestamp = (
-            datetime.now(timezone.utc)
-            .isoformat(timespec="microseconds")
-            .replace("+00:00", "Z")
+            datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
         )
 
         self.bytes_received: int = 0

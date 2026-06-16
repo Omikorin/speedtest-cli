@@ -3,19 +3,19 @@ Speedtest-related exceptions.
 """
 
 __all__ = [
-    "SpeedtestException",
-    "SpeedtestCLIError",
-    "SpeedtestHTTPError",
-    "SpeedtestConfigError",
-    "SpeedtestServersError",
     "ConfigRetrievalError",
-    "ServersRetrievalError",
     "NoMatchedServer",
+    "ServersRetrievalError",
     "ShareResultsConnectFailure",
     "ShareResultsSubmitFailure",
-    "SpeedtestUploadTimeout",
     "SpeedtestBestServerFailure",
+    "SpeedtestCLIError",
+    "SpeedtestConfigError",
+    "SpeedtestException",
+    "SpeedtestHTTPError",
     "SpeedtestMissingBestServer",
+    "SpeedtestServersError",
+    "SpeedtestUploadTimeout",
 ]
 
 

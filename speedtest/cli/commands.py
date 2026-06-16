@@ -19,13 +19,13 @@ from speedtest.utils.status import ExitStatus
 __all__ = [
     "get_speedtest_instance",
     "handle_server_list",
-    "select_server",
     "run_transfer_tests",
+    "select_server",
 ]
 
 # Exception groupings for cleaner try/except blocks
-CONFIG_EXCEPTIONS = tuple(HTTP_ERRORS) + (ConfigRetrievalError,)
-SERVER_EXCEPTIONS = tuple(HTTP_ERRORS) + (ServersRetrievalError,)
+CONFIG_EXCEPTIONS = (*tuple(HTTP_ERRORS), ConfigRetrievalError)
+SERVER_EXCEPTIONS = (*tuple(HTTP_ERRORS), ServersRetrievalError)
 
 
 def get_speedtest_instance(

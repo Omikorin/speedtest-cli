@@ -4,18 +4,19 @@ Request building and execution utilities.
 
 import platform
 import time
+from collections.abc import Iterable
 from functools import cache
 from http.client import HTTPResponse
-from typing import Iterable
 from urllib.request import OpenerDirector, Request, urlopen
 
 from speedtest import __version__
 from speedtest.http.errors import HTTP_ERRORS
+from speedtest.http.workers import HTTPUploaderData
 from speedtest.utils.logger import logger
 
 __all__ = [
-    "build_user_agent",
     "build_request",
+    "build_user_agent",
     "catch_request",
 ]
 
@@ -39,7 +40,7 @@ def build_user_agent() -> str:
 
 def build_request(
     url: str,
-    data: bytes | Iterable[bytes] | None = None,
+    data: bytes | Iterable[bytes] | HTTPUploaderData | None = None,
     headers: dict[str, str] | None = None,
     bump: str = "0",
 ) -> Request:

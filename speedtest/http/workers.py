@@ -10,8 +10,8 @@ from speedtest.exceptions import SpeedtestUploadTimeout
 from speedtest.http.errors import HTTP_ERRORS, UPLOAD_ERRORS
 
 __all__ = [
-    "download_worker",
     "HTTPUploaderData",
+    "download_worker",
     "upload_worker",
 ]
 

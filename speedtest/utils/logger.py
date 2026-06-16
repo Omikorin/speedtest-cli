@@ -5,7 +5,7 @@ Global logging configuration for the CLI.
 import logging
 import sys
 
-__all__ = ["setup_logging", "logger"]
+__all__ = ["logger", "setup_logging"]
 
 logger = logging.getLogger("speedtest")
 

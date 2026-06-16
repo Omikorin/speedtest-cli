@@ -18,4 +18,4 @@ HTTP_ERRORS = (
     ssl.CertificateError,
 )
 
-UPLOAD_ERRORS = HTTP_ERRORS + (SpeedtestUploadTimeout,)
+UPLOAD_ERRORS = (*HTTP_ERRORS, SpeedtestUploadTimeout)
