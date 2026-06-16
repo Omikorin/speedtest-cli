@@ -17,10 +17,11 @@ requires-python = ">=3.12"
 keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Programming Language :: Python :: 3",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: System :: Networking",
     "Topic :: Terminals",
@@ -45,12 +46,15 @@ version = {attr = "speedtest.__version__"}
 [tool.setuptools.data-files]
 "share/man/man1" = ["extras/man/speedtest-cli.1"]
 
+[tool.uv]
+required-version = ">=0.11.0"
+
 [dependency-groups]
 dev = [
+    "pyright>=1.1.400",
     "pytest>=9.0.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.0",
-    "pyright>=1.1.400",
 ]
 
 [tool.ruff]
