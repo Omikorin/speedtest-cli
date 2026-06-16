@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Build packages
+        run: uv build
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    if: false # TODO: enable when there is something worth testing
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run tests
+        run: uv run pytest
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run lint
+        run: uv run ruff format --check .
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run lint
+        run: uv run ruff check .
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest.github/workflows/ci.yml
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run typecheck
+        run: uv run pyright
