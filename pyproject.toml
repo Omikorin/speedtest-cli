@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedtest-cli"
-dynamic = ["version"]
+version = "0.1.0"
 authors = [
     {name = "Matt Martz", email = "matt@sivel.net"},
     {name = "Michał Korczak", email = "git@omikor.in"}
@@ -39,9 +39,6 @@ speedtest-cli = "speedtest.__main__:main"
 # Tool-specific configurations
 [tool.setuptools.packages.find]
 include = ["speedtest", "speedtest.*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "speedtest.__version__"}
 
 [tool.setuptools.data-files]
 "share/man/man1" = ["extras/man/speedtest-cli.1"]
