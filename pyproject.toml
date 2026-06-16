@@ -46,13 +46,11 @@ include = ["speedtest", "speedtest.*"]
 [tool.uv]
 required-version = ">=0.11.0"
 
-[dependency-groups]
-dev = [
-    "pyright>=1.1.400",
-    "pytest>=9.0.0",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.15.0",
-]
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
 
 [tool.ruff]
 target-version = "py312"
@@ -86,3 +84,11 @@ minversion = "9.0"
 # Automatically show extra test info, fail if coverage drops, and output a terminal coverage report
 addopts = "-v --cov=speedtest --cov-report=term-missing"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.400",
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.0",
+]

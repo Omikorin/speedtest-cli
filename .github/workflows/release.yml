@@ -3,15 +3,28 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "The branch, tag or SHA to release from"
+      index:
+        description: "Python index to release to"
         required: true
-        default: "main"
+        default: "pypi"
+        type: choice
+        options:
+          - "pypi"
+          - "testpypi"
+  # push:
+  #   tags:
+  #     # Publish on any tag starting with a `v`, e.g., v1.2.3
+  #     - v*
 
 jobs:
-  release:
-    name: Release
+  pypi:
+    name: Publish to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout branch
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -19,5 +32,13 @@ jobs:
       - name: Install
         uses: ./.github/composite-actions/install
 
-      - name: Build packages
+      - name: Build
         run: uv build
+
+      - name: Publish
+        run: |
+          if [ "${{ github.event.inputs.index }}" = "pypi" ]; then
+            uv publish
+          else
+            uv publish --index "${{ github.event.inputs.index }}"
+          fi
