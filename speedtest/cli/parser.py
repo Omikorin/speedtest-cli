@@ -85,19 +85,28 @@ def parse_args() -> argparse.Namespace:
         action="store_const",
         const=("byte", 8),
         default=("bit", 1),
-        help="Display values in bytes instead of bits. Does not affect image generation or JSON/CSV output.",
+        help=(
+            "Display values in bytes instead of bits."
+            "Does not affect image generation or JSON/CSV output."
+        ),
     )
 
     format_group = output_group.add_mutually_exclusive_group()
     format_group.add_argument(
         "--csv",
         action="store_true",
-        help="Suppress verbose output, only show basic information in CSV format. Speeds listed in bit/s.",
+        help=(
+            "Suppress verbose output, only show basic information "
+            "in CSV format. Speeds listed in bit/s."
+        ),
     )
     format_group.add_argument(
         "--json",
         action="store_true",
-        help="Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s.",
+        help=(
+            "Suppress verbose output, only show basic information "
+            "in JSON format. Speeds listed in bit/s."
+        ),
     )
 
     output_group.add_argument(
@@ -114,14 +123,8 @@ def parse_args() -> argparse.Namespace:
     conn_group.add_argument(
         "--source", type=str, help="Bind a source IP address to use for connections."
     )
-    conn_group.add_argument(
-        "--timeout", default=10.0, type=float, help="HTTP timeout in seconds."
-    )
-    conn_group.add_argument(
-        "--debug", action="store_true", help="Show verbose debugging output."
-    )
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
-    )
+    conn_group.add_argument("--timeout", default=10.0, type=float, help="HTTP timeout in seconds.")
+    conn_group.add_argument("--debug", action="store_true", help="Show verbose debugging output.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser.parse_args()
