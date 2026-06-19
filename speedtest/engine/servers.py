@@ -99,7 +99,7 @@ def fetch_servers(
             except (ValueError, TypeError):
                 continue
 
-            attrib["d"] = distance
+            attrib["d"] = distance # type: ignore
             servers_dict[distance].append(attrib)
 
         if servers_dict:
@@ -132,7 +132,7 @@ def _ping_server(
     latencies = []
 
     for i in range(pings):
-        request = build_request(url, headers=headers, bump=i)
+        request = build_request(url, headers=headers, bump=str(i))
         start = time.monotonic()
 
         uh, e = catch_request(request, opener=opener)
