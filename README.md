@@ -16,7 +16,29 @@ Rebuilt for modern Python 3.12+
 
 #### PyPI
 
-TODO:
+You can install `speedtest-cli-ng` from PyPI using either standard Python packaging tools or `uv`.
+
+#### Using pip
+
+If you have `pip` only. You can also use `pipx` to run the tool without installing.
+
+```bash
+pip install speedtest-cli-ng
+```
+
+#### Using uv
+
+You can run the tool instantly without explicitly managing environments:
+
+```bash
+uvx speedtest-cli-ng
+```
+
+or install it globally:
+
+```bash
+uv tool install speedtest-cli-ng
+```
 
 ### Usage
 
