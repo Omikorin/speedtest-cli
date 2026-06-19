@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigestsToSemver",
+    ":configMigration",
+    "abandonments:recommended",
+    "group:allNonMajor",
+    ":maintainLockFilesWeekly",
+    "schedule:weekly"
+  ],
+  "rangeStrategy": "update-lockfile",
+  "minimumReleaseAge": "7 days",
+  "prCreation": "immediate",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "labels": [
+    "dependencies"
+  ],
+  "suppressNotifications": [
+    "prEditedNotification"
+  ]
+}
