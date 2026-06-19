@@ -1,9 +1,9 @@
 # speedtest-cli
 
-<!-- [![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
-<!-- [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
-[![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli-ng)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE)
-<!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
+[![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
+[![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
+<!-- [![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE) -->
 <!-- TODO: SonarQube, GitHub Actions? -->
 
 Next generation CLI for testing internet bandwidth using speedtest.net
@@ -20,7 +20,13 @@ TODO:
 
 ### Usage
 
+To view the available options, run the help command:
+
 ```bash
+speedtest-cli --help
+```
+
+```text
 usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload] [-t THREADS | --single]
                      [--share] [--bytes] [--csv | --json] [--csv-delimiter CSV_DELIMITER]
                      [--csv-header] [--source SOURCE] [--timeout TIMEOUT] [--debug] [--version]
