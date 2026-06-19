@@ -4,6 +4,7 @@ Global logging configuration for the CLI.
 
 import logging
 import sys
+from typing import TextIO
 
 __all__ = ["logger", "setup_logging"]
 
@@ -19,13 +20,17 @@ class CLIColoredFormatter(logging.Formatter):
     GREY_COLOR = "\033[1;30m"
     RESET_COLOR = "\033[0m"
 
+    def __init__(
+        self, fmt: str | None = None, datefmt: str | None = None, stream: TextIO | None = None
+    ) -> None:
+        super().__init__(fmt, datefmt)
+        self.stream: TextIO = stream or sys.stdout
+
     def format(self, record: logging.LogRecord) -> str:
         message = record.getMessage()
 
         if record.levelno == logging.DEBUG:
-            # Safely fetch the stream attached to this formatter, fallback to stdout
-            stream = getattr(self, "stream", sys.stdout)
-            if hasattr(stream, "isatty") and stream.isatty():
+            if hasattr(self.stream, "isatty") and self.stream.isatty():
                 return f"{self.GREY_COLOR}DEBUG: {message}{self.RESET_COLOR}"
             return f"DEBUG: {message}"
 
@@ -62,16 +67,14 @@ def setup_logging(debug: bool = False, quiet: bool = False) -> None:
 
     # Route DEBUG & INFO messages cleanly to stdout
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_formatter = CLIColoredFormatter()
-    stdout_formatter.stream = sys.stdout  # Bind stream for isatty() check
+    stdout_formatter = CLIColoredFormatter(stream=sys.stdout)
     stdout_handler.setFormatter(stdout_formatter)
     stdout_handler.setLevel(logging.DEBUG)
     stdout_handler.addFilter(MaxLevelFilter(logging.INFO))
 
     # Route WARNING, ERROR & CRITICAL messages cleanly to stderr
     stderr_handler = logging.StreamHandler(sys.stderr)
-    stderr_formatter = CLIColoredFormatter()
-    stderr_formatter.stream = sys.stderr
+    stderr_formatter = CLIColoredFormatter(stream=sys.stderr)
     stderr_handler.setFormatter(stderr_formatter)
     stderr_handler.setLevel(logging.WARNING)
 

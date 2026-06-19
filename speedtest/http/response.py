@@ -3,13 +3,13 @@ Response reading and gzip decoding.
 """
 
 import gzip
+import io
 from http.client import HTTPResponse
-from typing import IO
 
 __all__ = ["get_response_stream"]
 
 
-def get_response_stream(response: HTTPResponse) -> IO[bytes]:
+def get_response_stream(response: HTTPResponse) -> io.BufferedIOBase:
     """
     Return a streaming Gzip reader if ``Content-Encoding`` is ``gzip``,
     otherwise return the response stream itself.
