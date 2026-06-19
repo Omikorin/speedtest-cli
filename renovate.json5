@@ -27,12 +27,24 @@
         "python"
       ],
       "matchUpdateTypes": [
-        "patch"
-      ]
+        "minor",
+        "major"
+      ],
+      "enabled": false
     },
     {
-      "matchPackageNames": [
-        "python"
+      "matchDepTypes": [
+        "pyenv"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "matchManagers": [
+        "pyenv"
       ],
       "matchUpdateTypes": [
         "minor",
