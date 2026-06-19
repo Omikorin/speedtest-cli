@@ -1,12 +1,12 @@
 """
-speedtest-cli: Command line interface for testing internet bandwidth using speedtest.net
+speedtest-cli: Next generation command line interface for testing internet bandwidth using speedtest.net
 
 """
 
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("speedtest-cli")
+    __version__ = version("speedtest-cli-ng")
 except PackageNotFoundError:
     __version__ = "unknown"
 
