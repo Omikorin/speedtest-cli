@@ -54,7 +54,7 @@ explicit = true
 
 [tool.ruff]
 target-version = "py312"
-line-length = 88
+line-length = 100
 src = ["speedtest", "tests"]
 
 [tool.ruff.lint]
