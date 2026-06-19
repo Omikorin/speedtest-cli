@@ -32,7 +32,7 @@ def fetch_config(opener: Any) -> dict[str, Any]:
 
     with uh:
         if int(getattr(uh, "code", 200)) != 200:
-            raise ConfigRetrievalError(f"HTTP Error {uh.code} while fetching config")
+            raise ConfigRetrievalError(f"HTTP Error {uh.code} while fetching config")  # type: ignore
 
         try:
             with get_response_stream(uh) as stream:
@@ -62,14 +62,12 @@ def fetch_config(opener: Any) -> dict[str, Any]:
     ):
         raise SpeedtestConfigError("Missing expected XML tags in the config payload.")
 
-    server_config = server_config_node.attrib
-    download = download_node.attrib
-    upload = upload_node.attrib
-    client = client_node.attrib
+    server_config = server_config_node.attrib  # type: ignore
+    download = download_node.attrib  # type: ignore
+    upload = upload_node.attrib  # type: ignore
+    client = client_node.attrib  # type: ignore
 
-    ignore_servers = [
-        int(i) for i in server_config.get("ignoreids", "").split(",") if i.strip()
-    ]
+    ignore_servers = [int(i) for i in server_config.get("ignoreids", "").split(",") if i.strip()]
 
     ratio = int(upload.get("ratio", 5))
     upload_max = int(upload.get("maxchunkcount", 50))
@@ -84,9 +82,7 @@ def fetch_config(opener: Any) -> dict[str, Any]:
 
     size_count = len(sizes["upload"])
     if size_count == 0:
-        raise SpeedtestConfigError(
-            "Upload size list evaluated to empty based on configured ratio."
-        )
+        raise SpeedtestConfigError("Upload size list evaluated to empty based on configured ratio.")
 
     upload_count = math.ceil(upload_max / size_count)
 

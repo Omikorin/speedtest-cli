@@ -1,5 +1,5 @@
 """
-speedtest-cli: Next generation command line interface for testing internet bandwidth using speedtest.net
+speedtest-cli: Next generation CLI for testing internet bandwidth using speedtest.net
 
 """
 

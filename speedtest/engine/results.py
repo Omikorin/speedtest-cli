@@ -50,9 +50,7 @@ class SpeedtestResults:
         self._share: str | None = None
 
         # Generate a clean ISO 8601 UTC timestamp
-        self.timestamp = (
-            datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
-        )
+        self.timestamp = datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
         self.bytes_received: int = 0
         self.bytes_sent: int = 0
@@ -113,9 +111,7 @@ class SpeedtestResults:
         with f:
             code = int(getattr(f, "code", 500))
             if code != 200:
-                raise ShareResultsSubmitFailure(
-                    f"Could not submit results. HTTP {code}"
-                )
+                raise ShareResultsSubmitFailure(f"Could not submit results. HTTP {code}")
 
             response = f.read()
 
@@ -124,9 +120,7 @@ class SpeedtestResults:
         resultid = qsargs.get("resultid")
 
         if not resultid or len(resultid) != 1:
-            raise ShareResultsSubmitFailure(
-                "Could not parse result ID from API response"
-            )
+            raise ShareResultsSubmitFailure("Could not parse result ID from API response")
 
         self._share = f"https://www.speedtest.net/result/{resultid[0]}.png"
         return self._share

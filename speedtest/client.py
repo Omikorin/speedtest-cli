@@ -54,9 +54,7 @@ class Speedtest:
             self.get_best_server()
         return self._best
 
-    def get_servers(
-        self, server: int | None = None
-    ) -> dict[float, list[dict[str, Any]]]:
+    def get_servers(self, server: int | None = None) -> dict[float, list[dict[str, Any]]]:
         """
         Fetch the server list from speedtest.net, sort them by distance,
         and optionally filter down to a specific server ID.
@@ -72,9 +70,7 @@ class Speedtest:
 
         # Flatten the distance-grouped dict into a clean linear list sorted by proximity
         sorted_distances = sorted(self.servers.keys())
-        self.closest = [
-            srv for distance in sorted_distances for srv in self.servers[distance]
-        ]
+        self.closest = [srv for distance in sorted_distances for srv in self.servers[distance]]
 
         # Filter by a specific server ID if requested
         if server is not None:

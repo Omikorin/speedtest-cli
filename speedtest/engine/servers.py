@@ -18,9 +18,7 @@ from speedtest.utils.logger import logger
 __all__ = ["fetch_servers", "get_best_server"]
 
 
-def _calculate_distance(
-    origin: tuple[float, float], destination: tuple[float, float]
-) -> float:
+def _calculate_distance(origin: tuple[float, float], destination: tuple[float, float]) -> float:
     """Determine distance between 2 sets of [lat, lon] in km using the Haversine formula."""
 
     lat1, lon1 = origin
@@ -31,9 +29,7 @@ def _calculate_distance(
     dlon = math.radians(lon2 - lon1)
 
     a = (math.sin(dlat / 2) ** 2) + (
-        math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * (math.sin(dlon / 2) ** 2)
+        math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * (math.sin(dlon / 2) ** 2)
     )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
@@ -99,16 +95,14 @@ def fetch_servers(
             except (ValueError, TypeError):
                 continue
 
-            attrib["d"] = distance # type: ignore
+            attrib["d"] = distance  # type: ignore
             servers_dict[distance].append(attrib)
 
         if servers_dict:
             break
 
     if not servers_dict:
-        raise ServersRetrievalError(
-            "Failed to retrieve or parse speedtest server list."
-        )
+        raise ServersRetrievalError("Failed to retrieve or parse speedtest server list.")
 
     logger.debug(f"Discovered {sum(len(s) for s in servers_dict.values())} servers.")
 
@@ -185,9 +179,7 @@ def get_best_server(
                 logger.debug(f"Server ping generated an exception: {e}")
 
     if best_server is None:
-        raise SpeedtestBestServerFailure(
-            "Unable to determine best server via latency pings."
-        )
+        raise SpeedtestBestServerFailure("Unable to determine best server via latency pings.")
 
     logger.debug(
         f"Best server selected: {best_server.get('sponsor')} "

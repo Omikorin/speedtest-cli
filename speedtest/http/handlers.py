@@ -81,9 +81,7 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
     https_request = AbstractHTTPHandler.do_request_
 
 
-def build_opener(
-    source_address: str | None = None, timeout: float = 10.0
-) -> OpenerDirector:
+def build_opener(source_address: str | None = None, timeout: float = 10.0) -> OpenerDirector:
     """Build an ``OpenerDirector`` with explicit custom handlers."""
 
     logger.debug(f"Timeout set to {timeout}")

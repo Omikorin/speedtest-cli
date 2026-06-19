@@ -6,8 +6,7 @@
 <!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
 <!-- TODO: SonarQube, GitHub Actions? -->
 
-Command line interface for testing internet bandwidth using
-speedtest.net
+Next generation CLI for testing internet bandwidth using speedtest.net
 
 Rebuilt for modern Python 3.12+
 
@@ -26,7 +25,7 @@ usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload] [-t THR
                      [--share] [--bytes] [--csv | --json] [--csv-delimiter CSV_DELIMITER]
                      [--csv-header] [--source SOURCE] [--timeout TIMEOUT] [--debug] [--version]
 
-Command line interface for testing internet bandwidth using speedtest.net.
+Next generation CLI for testing internet bandwidth using speedtest.net.
 
 options:
   -h, --help            show this help message and exit

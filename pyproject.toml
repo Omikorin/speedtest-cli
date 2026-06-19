@@ -12,7 +12,7 @@ authors = [
 ]
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
-description = "Next generation command line interface for testing internet bandwidth using speedtest.net"
+description = "Next generation CLI for testing internet bandwidth using speedtest.net"
 readme = "README.md"
 requires-python = ">=3.12"
 keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
