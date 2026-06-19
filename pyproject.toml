@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedtest-cli-ng"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     {name = "Michał Korczak", email = "git@omikor.in"}
     # TODO: I'm not sure whether I should put the old author because of possible spam for him unknowingly etc
