@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     """Function to handle building and parsing of command line arguments."""
 
     description = (
-        "Command line interface for testing internet bandwidth using speedtest.net.\n"
+        "Next generation CLI for testing internet bandwidth using speedtest.net.\n"
         "--------------------------------------------------------------------------\n"
         "https://github.com/Omikorin/speedtest-cli"
     )
