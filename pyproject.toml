@@ -31,7 +31,8 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/Omikorin/speedtest-cli"
-GitHub = "https://github.com/Omikorin/speedtest-cli"
+Source = "https://github.com/Omikorin/speedtest-cli"
+Issues = "https://github.com/Omikorin/speedtest-cli/issues"
 
 [project.scripts]
 speedtest = "speedtest.__main__:main"
