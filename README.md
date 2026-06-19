@@ -1,9 +1,9 @@
 # speedtest-cli
 
-<!-- [![PyPI version](https://img.shields.io/pypi/v/speedtest-cli.svg)](https://github.com/Omikorin/speedtest-cli) -->
-<!-- [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli.svg)](https://github.com/Omikorin/speedtest-cli) -->
-[![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE)
-<!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli.svg)](https://github.com/Omikorin/speedtest-cli) -->
+<!-- [![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
+<!-- [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
+[![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli-ng)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE)
+<!-- [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli) -->
 <!-- TODO: SonarQube, GitHub Actions? -->
 
 Command line interface for testing internet bandwidth using

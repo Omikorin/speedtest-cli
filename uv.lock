@@ -209,7 +209,7 @@ wheels = [
 ]
 
 [[package]]
-name = "speedtest-cli"
+name = "speedtest-cli-ng"
 version = "0.1.0"
 source = { editable = "." }
 
