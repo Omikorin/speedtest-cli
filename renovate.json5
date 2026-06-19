@@ -20,5 +20,25 @@
   ],
   "suppressNotifications": [
     "prEditedNotification"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "python"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ]
+    },
+    {
+      "matchPackageNames": [
+        "python"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "enabled": false
+    }
   ]
 }
