@@ -5,7 +5,7 @@ Handles fetching, distance calculation, and latency ranking of speedtest.net ser
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
-from urllib.request import OpenerD  irector
+from urllib.request import OpenerDirector
 
 from speedtest.exceptions import SpeedtestBestServerFailure
 from speedtest.http.request import build_request, build_user_agent, catch_request
