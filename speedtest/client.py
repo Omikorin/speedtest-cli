@@ -1,12 +1,13 @@
 import threading
-from typing import Any
+from operator import attrgetter
 
 from speedtest.engine.config import get_config
 from speedtest.engine.results import SpeedtestResults
-from speedtest.engine.servers import fetch_servers, get_best_server
+from speedtest.engine.servers import get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
 from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
 from speedtest.http.handlers import build_opener
+from speedtest.models import Server
 
 __all__ = ["Speedtest"]
 
@@ -34,72 +35,84 @@ class Speedtest:
         self.lat_lon = (self.config.location.latitude, self.config.location.longitude)
 
         # Core state data structures
-        self.servers: dict[float, list[dict[str, Any]]] = {}
-        self.closest: list[dict[str, Any]] = []
-        self._best: dict[str, Any] = {}
+        self.servers: list[Server] = []
+        self.sorted_servers: list[Server] = []
+        self.closest_servers: list[Server] = []
+        self._best: Server | None = None
+        self._best_latency: float = 3600.0
 
         self.results = SpeedtestResults(
             opener=self._opener,
         )
 
     @property
-    def best(self) -> dict[str, Any]:
+    def best(self) -> Server:
         """Lazy-loaded property to retrieve the best available server."""
 
         if not self._best:
             self.get_best_server()
-        return self._best
+        return self._best  # type: ignore
 
-    def get_servers(self, server: int | None = None) -> dict[float, list[dict[str, Any]]]:
+    def get_sorted_servers(self) -> list[Server]:
+        """
+        Sorts a list of servers by their pre-calculated distance.
+        """
+
+        self.sorted_servers = sorted(self.servers, key=attrgetter("distance"))
+
+        return self.sorted_servers
+
+    def get_closest_servers(self, limit: int) -> list[Server]:
+        """
+        Returns the top N closest servers.
+        """
+
+        self.closest_servers = self.sorted_servers[:limit]
+
+        return self.closest_servers
+
+    def get_servers(self, server: int | None = None, limit: int = 5) -> list[Server]:
         """
         Fetch the server list from speedtest.net, sort them by distance,
         and optionally filter down to a specific server ID.
         """
 
-        self.servers = fetch_servers(
-            opener=self._opener,
-            lat_lon=self.lat_lon,
-        )
-
-        # Flatten the distance-grouped dict into a clean linear list sorted by proximity
-        sorted_distances = sorted(self.servers.keys())
-        self.closest = [srv for distance in sorted_distances for srv in self.servers[distance]]
+        self.servers = self.config.servers.copy()
+        self.get_sorted_servers()
+        self.get_closest_servers(limit)
 
         # Filter by a specific server ID if requested
         if server is not None:
-            self.closest = [s for s in self.closest if int(s.get("id", 0)) == server]
+            self.closest_servers = [srv for srv in self.servers if srv.id == server]
 
-            if not self.closest:
+            if not self.closest_servers:
                 raise NoMatchedServer(f"No server matched the ID: {server}")
 
         return self.servers
 
-    def get_best_server(self, limit: int = 5) -> dict[str, Any]:
+    def get_best_server(self, limit: int = 5) -> Server:
         """Determine the lowest-latency server by pinging the top `limit` closest options."""
 
-        if not self.closest:
-            self.get_servers()
+        if not self.closest_servers:
+            self.get_servers(limit)
 
-        if not self.closest:
+        if not self.closest_servers:
             raise SpeedtestCLIError("No servers available to test against.")
 
-        # Isolate the closest N servers to avoid wasting execution time pinging distant servers
-        candidates = self.closest[:limit]
-
-        self._best = get_best_server(candidates, self._opener)
+        self._best, self._best_latency = get_best_server(self.closest_servers, self._opener)
 
         if not self._best:
             raise SpeedtestCLIError("Failed to identify a valid best server.")
 
         self.results.server = self._best
-        self.results.ping = self._best.get("latency_ms", 0.0)
+        self.results.ping = self._best_latency
 
         return self._best
 
     def download(self) -> float:
         """Test concurrent download speed against the chosen optimal server."""
 
-        best_url = self.best.get("url")
+        best_url = self.best.url
         if not best_url:
             raise SpeedtestCLIError("The best selected server is missing a valid URL.")
 
@@ -118,7 +131,7 @@ class Speedtest:
     def upload(self) -> float:
         """Test concurrent upload speed against the chosen optimal server."""
 
-        best_url = self.best.get("url")
+        best_url = self.best.url
         if not best_url:
             raise SpeedtestCLIError("The best selected server is missing a valid URL.")
 

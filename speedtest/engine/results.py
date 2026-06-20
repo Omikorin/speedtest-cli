@@ -14,6 +14,7 @@ from urllib.request import OpenerDirector
 from speedtest.exceptions import ShareResultsConnectFailure, ShareResultsSubmitFailure
 from speedtest.http.handlers import build_opener
 from speedtest.http.request import build_request, catch_request
+from speedtest.models import Server
 
 __all__ = ["SpeedtestResults"]
 
@@ -37,13 +38,13 @@ class SpeedtestResults:
         download: float = 0.0,
         upload: float = 0.0,
         ping: float = 0.0,
-        server: dict[str, Any] | None = None,
+        server: Server | None = None,
         opener: OpenerDirector | None = None,
     ):
         self.download = download
         self.upload = upload
         self.ping = ping
-        self.server = server or {}
+        self.server = server
 
         self._share: str | None = None
 
@@ -64,6 +65,9 @@ class SpeedtestResults:
         if self._share:
             return self._share
 
+        if not self.server:
+            return ""
+
         download = round(self.download / 1000.0)
         ping = round(self.ping)
         upload = round(self.upload / 1000.0)
@@ -74,7 +78,7 @@ class SpeedtestResults:
         # We use a list of tuples instead of a dict because the speedtest API
         # expects parameters in a strict sequential order. urlencode preserves this.
         api_parameters = [
-            ("recommendedserverid", self.server.get("id", "")),
+            ("recommendedserverid", self.server.id),
             ("ping", ping),
             ("screenresolution", ""),
             ("promo", ""),
@@ -88,7 +92,7 @@ class SpeedtestResults:
             ("accuracy", 1),
             ("bytesreceived", self.bytes_received),
             ("bytessent", self.bytes_sent),
-            ("serverid", self.server.get("id", "")),
+            ("serverid", self.server.id),
         ]
 
         api_data = urlencode(api_parameters).encode()

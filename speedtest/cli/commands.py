@@ -58,14 +58,13 @@ def handle_server_list(st: Speedtest) -> int:
         raise SpeedtestCLIError(e) from e
 
     try:
-        for _, servers in sorted(st.servers.items()):
-            for server in servers:
-                line = (
-                    f"{server.get('id', 0):>5}) {server.get('sponsor', 'Unknown')} "
-                    f"({server.get('name', 'Unknown')}, {server.get('country', 'Unknown')}) "
-                    f"[{server.get('d', 0.0):.2f} km]"
-                )
-                print(line)
+        for server in st.sorted_servers:
+            line = (
+                f"{server.id:>5}) {server.sponsor} "
+                f"({server.name}, {server.country}) "
+                f"[{server.distance:.2f} km]"
+            )
+            print(line)
     except BrokenPipeError:
         pass
 

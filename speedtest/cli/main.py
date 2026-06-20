@@ -55,7 +55,7 @@ def shell() -> int:
     _validate_args(args)
 
     # if args.csv_header:
-        # return csv_header(args.csv_delimiter)
+    # return csv_header(args.csv_delimiter)
 
     # Setup graceful shutdown for threads
     shutdown_event = _register_shutdown_handler()
@@ -79,19 +79,18 @@ def shell() -> int:
         return handle_server_list(st)
 
     # Execute Standard Pipeline
-    # client_cfg = st.config.get("client", {})
-    # logger.info(
-    #     f"Testing from {client_cfg.get('isp', 'Unknown ISP')} "
-    #     f"({client_cfg.get('ip', 'Unknown IP')})..."
-    # )
+    logger.info(f"Testing from {st.config.isp_name} ({st.config.ip_address})...")
 
     select_server(st, server=args.server)
 
     server_cfg = st.results.server
+    if not server_cfg:
+        return ExitStatus.ERROR
+
     logger.info(
-        f"Hosted by {server_cfg.get('sponsor', 'Unknown')} "
-        f"({server_cfg.get('name', 'Unknown')}) "
-        f"[{server_cfg.get('d', 0.0):.2f} km]: {st.results.ping:.4f} ms"
+        f"Hosted by {server_cfg.sponsor} "
+        f"({server_cfg.name}) "
+        f"[{server_cfg.distance:.2f} km]: {st.results.ping:.4f} ms"
     )
 
     run_transfer_tests(

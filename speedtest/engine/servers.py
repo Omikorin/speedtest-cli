@@ -13,6 +13,7 @@ from urllib.request import OpenerDirector
 from speedtest.exceptions import ServersRetrievalError, SpeedtestBestServerFailure
 from speedtest.http.request import build_request, build_user_agent, catch_request
 from speedtest.http.response import get_response_stream
+from speedtest.models import Server
 from speedtest.utils.logger import logger
 
 __all__ = ["fetch_servers", "get_best_server"]
@@ -108,15 +109,15 @@ def fetch_servers(
 
 
 def _ping_server(
-    server: dict[str, Any],
+    server: Server,
     opener: OpenerDirector,
     headers: dict[str, Any] | None = None,
     pings: int = 3,
-) -> tuple[dict[str, Any], float]:
+) -> tuple[Server, float]:
     """Ping a single server multiple times and return the average latency."""
 
     headers = headers or {}
-    url: str = server.get("url", "").replace("upload.php", "latency.txt")
+    url: str = server.url.replace("upload.php", "latency.txt")
 
     if not url:
         return server, 3600.0
@@ -141,16 +142,13 @@ def _ping_server(
             latency = time.monotonic() - start
             latencies.append(latency)
 
-    avg_latency = sum(latencies) / len(latencies)
-    server["latency"] = avg_latency
-    server["latency_ms"] = avg_latency * 1000.0
+    # in milliseconds
+    avg_latency = sum(latencies) / len(latencies) * 1000.0
 
     return server, avg_latency
 
 
-def get_best_server(
-    closest_servers: list[dict[str, Any]], opener: OpenerDirector
-) -> dict[str, Any]:
+def get_best_server(closest_servers: list[Server], opener: OpenerDirector) -> tuple[Server, float]:
     """
     Concurrently ping the closest servers to determine which has the lowest latency.
     """
@@ -180,8 +178,8 @@ def get_best_server(
         raise SpeedtestBestServerFailure("Unable to determine best server via latency pings.")
 
     logger.debug(
-        f"Best server selected: {best_server.get('sponsor')} "
-        f"({best_server.get('name')}) with latency {best_server.get('latency_ms', 0.0):.4f} ms"
+        f"Best server selected: {best_server.sponsor} "
+        f"({best_server.name}) with latency {lowest_latency:.4f} ms"
     )
 
-    return best_server
+    return best_server, lowest_latency
