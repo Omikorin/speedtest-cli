@@ -9,16 +9,6 @@ from speedtest import __version__
 __all__ = ["parse_args"]
 
 
-def _single_char_delimiter(value: str) -> str:
-    """Argparse type validator to ensure a delimiter is exactly one character."""
-
-    if len(value) != 1:
-        raise argparse.ArgumentTypeError(
-            f"CSV delimiter must be a single character, got: {value!r}"
-        )
-    return value
-
-
 def parse_args() -> argparse.Namespace:
     """Function to handle building and parsing of command line arguments."""
 
@@ -87,19 +77,11 @@ def parse_args() -> argparse.Namespace:
         default=("bit", 1),
         help=(
             "Display values in bytes instead of bits. "
-            "Does not affect image generation or JSON/CSV output."
+            "Does not affect image generation or JSON output."
         ),
     )
 
     # format_group = output_group.add_mutually_exclusive_group()
-    # format_group.add_argument(
-    #     "--csv",
-    #     action="store_true",
-    #     help=(
-    #         "Suppress verbose output, only show basic information "
-    #         "in CSV format. Speeds listed in bit/s."
-    #     ),
-    # )
     # format_group.add_argument(
     #     "--json",
     #     action="store_true",
@@ -107,16 +89,6 @@ def parse_args() -> argparse.Namespace:
     #         "Suppress verbose output, only show basic information "
     #         "in JSON format. Speeds listed in bit/s."
     #     ),
-    # )
-
-    # output_group.add_argument(
-    #     "--csv-delimiter",
-    #     default=",",
-    #     type=_single_char_delimiter,
-    #     help="Single character delimiter to use in CSV output.",
-    # )
-    # output_group.add_argument(
-    #     "--csv-header", action="store_true", help="Print CSV headers and exit."
     # )
 
     # conn_group = parser.add_argument_group("Connection Options")

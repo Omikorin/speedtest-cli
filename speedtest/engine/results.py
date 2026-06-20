@@ -2,11 +2,9 @@
 Manages the aggregation, formatting, and submission of speedtest results.
 """
 
-import csv
 import json
 from datetime import UTC, datetime
 from hashlib import md5
-from io import StringIO
 from typing import Any
 from urllib.parse import parse_qs, urlencode
 from urllib.request import OpenerDirector
@@ -28,7 +26,7 @@ class SpeedtestResults:
     * Ping/Latency to test server
     * Data about the server that the test was run against
 
-    Additionally, this class can return result data as a dictionary or CSV,
+    Additionally, this class can return result data as a dictionary,
     as well as submit a POST of the result data to the speedtest.net API
     to get a share results image link.
     """
@@ -140,53 +138,6 @@ class SpeedtestResults:
             "bytes_received": self.bytes_received,
             "share": self._share,
         }
-
-    @staticmethod
-    def csv_header(delimiter: str = ",") -> str:
-        """Return CSV Headers."""
-
-        row = [
-            "Server ID",
-            "Sponsor",
-            "Server Name",
-            "Timestamp",
-            "Distance",
-            "Ping",
-            "Download",
-            "Upload",
-            "Share",
-            # "IP Address",
-        ]
-
-        out = StringIO()
-        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
-        writer.writerow(row)
-
-        return out.getvalue()
-
-    def csv(self, delimiter: str = ",") -> str:
-        """Return data in CSV format."""
-
-        data = self.to_dict()
-        server = data.get("server", {})
-
-        row = [
-            server.get("id", ""),
-            server.get("sponsor", ""),
-            server.get("name", ""),
-            data.get("timestamp", ""),
-            server.get("d", ""),
-            data.get("ping", ""),
-            data.get("download", ""),
-            data.get("upload", ""),
-            self._share or "",
-        ]
-
-        out = StringIO()
-        writer = csv.writer(out, delimiter=delimiter, lineterminator="")
-        writer.writerow(row)
-
-        return out.getvalue()
 
     def json(self, pretty: bool = False) -> str:
         """Return data in JSON format."""

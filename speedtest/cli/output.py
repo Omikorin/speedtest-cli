@@ -1,12 +1,11 @@
 """
-Handles formatting, printing, and CSV/JSON output.
+Handles formatting, printing, and JSON output.
 """
 
 from speedtest.engine.results import SpeedtestResults
 from speedtest.utils.logger import logger
-from speedtest.utils.status import ExitStatus
 
-__all__ = ["convert_speed", "csv_header", "display_results"]
+__all__ = ["convert_speed", "display_results"]
 
 
 def convert_speed(speed_bps: float, unit_divisor: int) -> float:
@@ -15,21 +14,12 @@ def convert_speed(speed_bps: float, unit_divisor: int) -> float:
     return (speed_bps / 1_000_000) / unit_divisor
 
 
-def csv_header(delimiter: str = ",") -> int:
-    """Print the CSV Headers and return a successful exit status."""
-
-    print(SpeedtestResults.csv_header(delimiter=delimiter))
-    return ExitStatus.SUCCESS.value
-
-
 def display_results(
     results: SpeedtestResults,
-    csv_format: bool = False,
     json_format: bool = False,
-    csv_delimiter: str = ",",
     share: bool = False,
 ) -> None:
-    """Render the final output to the user based on requested format (JSON, CSV, Text)."""
+    """Render the final output to the user based on requested format (JSON, Text)."""
 
     logger.debug(f"Results:\n{results.to_dict()!r}")
 
@@ -37,10 +27,8 @@ def display_results(
     if share:
         share_link = results.share()
 
-    if csv_format:
-        print(results.csv(delimiter=csv_delimiter))
-    elif json_format:
+    if json_format:
         print(results.json())
 
-    if share and not (csv_format or json_format):
+    if share and not (json_format):
         print(f"Share results: {share_link}")

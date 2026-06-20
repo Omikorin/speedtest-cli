@@ -48,14 +48,11 @@ def shell() -> int:
 
     args = parse_args()
 
-    # is_quiet: bool = args.csv or args.json or args.csv_header
+    # is_quiet: bool = args.json
     # setup_logging(debug=args.debug, quiet=is_quiet)
     setup_logging(debug=args.debug)
 
     _validate_args(args)
-
-    # if args.csv_header:
-    # return csv_header(args.csv_delimiter)
 
     # Setup graceful shutdown for threads
     shutdown_event = _register_shutdown_handler()
@@ -101,9 +98,7 @@ def shell() -> int:
     )
     display_results(
         results=st.results,
-        # csv_format=args.csv,
         # json_format=args.json,
-        # csv_delimiter=args.csv_delimiter,
         share=args.share,
     )
 

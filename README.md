@@ -49,15 +49,12 @@ speedtest-cli --help
 ```
 
 ```text
-usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload] [-t THREADS | --single]
-                     [--share] [--bytes] [--csv | --json] [--csv-delimiter CSV_DELIMITER]
-                     [--csv-header] [--source SOURCE] [--timeout TIMEOUT] [--debug] [--version]
+usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload] [-t THREADS | --single] [--share] [--bytes] [--debug] [--version]
 
 Next generation CLI for testing internet bandwidth using speedtest.net.
 
 options:
   -h, --help            show this help message and exit
-  --version             show program's version number and exit
 
 Core Options:
   -l, --list            Show available speedtest.net servers sorted by distance. (default: False)
@@ -73,17 +70,11 @@ Transfer Modifiers:
 
 Output Options:
   --share               Generate and provide a URL to the speedtest.net share results image. (default: False)
-  --bytes               Display values in bytes instead of bits. Does not affect image generation or JSON/CSV output. (default: ('bit', 1))
-  --csv                 Suppress verbose output, only show basic information in CSV format. Speeds listed in bit/s. (default: False)
-  --json                Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s. (default: False)
-  --csv-delimiter CSV_DELIMITER
-                        Single character delimiter to use in CSV output. (default: ,)
-  --csv-header          Print CSV headers and exit. (default: False)
+  --bytes               Display values in bytes instead of bits. Does not affect image generation or JSON output. (default: ('bit', 1))
 
-Connection Options:
-  --source SOURCE       Bind a source IP address to use for connections. (default: None)
-  --timeout TIMEOUT     HTTP timeout in seconds. (default: 10.0)
+Miscellaneous Options:
   --debug               Show verbose debugging output. (default: False)
+  --version             show program's version number and exit
 ```
 
 ## Development

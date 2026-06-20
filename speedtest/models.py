@@ -93,7 +93,6 @@ class SpeedtestConfig:
 class RunContext:
     # User inputs / CLI state
     threads: int
-    csv_output: bool
     debug_mode: bool
 
     # Reconciled state
