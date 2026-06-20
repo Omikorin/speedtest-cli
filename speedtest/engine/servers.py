@@ -2,110 +2,17 @@
 Handles fetching, distance calculation, and latency ranking of speedtest.net servers.
 """
 
-import math
 import time
-import xml.etree.ElementTree as ET
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
-from urllib.request import OpenerDirector
+from urllib.request import OpenerD  irector
 
-from speedtest.exceptions import ServersRetrievalError, SpeedtestBestServerFailure
+from speedtest.exceptions import SpeedtestBestServerFailure
 from speedtest.http.request import build_request, build_user_agent, catch_request
-from speedtest.http.response import get_response_stream
 from speedtest.models import Server
 from speedtest.utils.logger import logger
 
-__all__ = ["fetch_servers", "get_best_server"]
-
-
-def _calculate_distance(origin: tuple[float, float], destination: tuple[float, float]) -> float:
-    """Determine distance between 2 sets of [lat, lon] in km using the Haversine formula."""
-
-    lat1, lon1 = origin
-    lat2, lon2 = destination
-    radius = 6371.0  # km
-
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-
-    a = (math.sin(dlat / 2) ** 2) + (
-        math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * (math.sin(dlon / 2) ** 2)
-    )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    return radius * c
-
-
-def fetch_servers(
-    opener: OpenerDirector,
-    lat_lon: tuple[float, float],
-) -> dict[float, list[dict[str, Any]]]:
-    """
-    Fetch the server list from speedtest.net, parse the XML, calculate
-    distances from the client, and return a dictionary grouped and sorted by distance.
-    """
-
-    urls = [
-        "https://c.speedtest.net/speedtest-servers-static.php",
-        "https://www.speedtest.net/speedtest-servers-static.php",
-    ]
-
-    servers_dict: defaultdict[float, list[dict[str, Any]]] = defaultdict(list)
-
-    for url in urls:
-        request = build_request(url)
-        uh, e = catch_request(request, opener=opener)
-
-        if e or not uh:
-            continue
-
-        with uh:
-            if int(getattr(uh, "code", 500)) != 200:
-                continue
-
-            try:
-                with get_response_stream(uh) as stream:
-                    serversxml = stream.read()
-            except (OSError, EOFError):
-                continue
-
-        logger.debug(f"Servers XML:\n{serversxml.decode(errors='ignore')}")
-
-        try:
-            root = ET.fromstring(serversxml)
-        except ET.ParseError:
-            continue
-
-        for server in root.findall(".//server"):
-            attrib = server.attrib
-            server_id = int(attrib.get("id", 0))
-
-            if not server_id:
-                continue
-
-            try:
-                lat_str, lon_str = attrib.get("lat"), attrib.get("lon")
-                if not lat_str or not lon_str:
-                    continue
-
-                server_lat_lon = (float(lat_str), float(lon_str))
-                distance = _calculate_distance(lat_lon, server_lat_lon)
-            except (ValueError, TypeError):
-                continue
-
-            attrib["d"] = distance  # type: ignore
-            servers_dict[distance].append(attrib)
-
-        if servers_dict:
-            break
-
-    if not servers_dict:
-        raise ServersRetrievalError("Failed to retrieve or parse speedtest server list.")
-
-    logger.debug(f"Discovered {sum(len(s) for s in servers_dict.values())} servers.")
-
-    return dict(servers_dict)
+__all__ = ["get_best_server"]
 
 
 def _ping_server(

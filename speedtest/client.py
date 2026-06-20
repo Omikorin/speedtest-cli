@@ -32,8 +32,6 @@ class Speedtest:
         # Fetch default configuration and safely merge optional overrides
         self.config = get_config()
 
-        self.lat_lon = (self.config.location.latitude, self.config.location.longitude)
-
         # Core state data structures
         self.servers: list[Server] = []
         self.sorted_servers: list[Server] = []
