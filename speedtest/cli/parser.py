@@ -123,7 +123,7 @@ def parse_args() -> argparse.Namespace:
     # conn_group.add_argument(
     #     "--source", type=str, help="Bind a source IP address to use for connections."
     # )
-    # conn_group.add_argument("--timeout", default=10.0, type=float, help="HTTP timeout in seconds.")
+    # conn_group.add_argument("--timeout", default=10.0, type=float, help="HTTP timeout in seconds")
 
     misc_group = parser.add_argument_group("Miscellaneous Options")
     misc_group.add_argument("--debug", action="store_true", help="Show verbose debugging output.")

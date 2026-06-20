@@ -7,7 +7,6 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
 from urllib.request import OpenerDirector, Request
 
 from speedtest.http.request import build_request
