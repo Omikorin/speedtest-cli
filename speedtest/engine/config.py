@@ -2,7 +2,6 @@
 Retrieves and parses the core configuration XML from speedtest.net.
 """
 
-import math
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -47,56 +46,14 @@ def fetch_config(opener: Any) -> dict[str, Any]:
     except ET.ParseError as err:
         raise SpeedtestConfigError(f"Malformed speedtest.net configuration: {err}")
 
-    server_config_node = root.find("server-config")
-    download_node = root.find("download")
-    upload_node = root.find("upload")
     client_node = root.find("client")
 
-    if not all(
-        [
-            server_config_node is not None,
-            download_node is not None,
-            upload_node is not None,
-            client_node is not None,
-        ]
-    ):
+    if not all([
+        client_node is not None,
+    ]):
         raise SpeedtestConfigError("Missing expected XML tags in the config payload.")
 
-    server_config = server_config_node.attrib  # type: ignore
-    download = download_node.attrib  # type: ignore
-    upload = upload_node.attrib  # type: ignore
     client = client_node.attrib  # type: ignore
-
-    ignore_servers = [int(i) for i in server_config.get("ignoreids", "").split(",") if i.strip()]
-
-    ratio = int(upload.get("ratio", 5))
-    upload_max = int(upload.get("maxchunkcount", 50))
-    up_sizes = [32768, 65536, 131072, 262144, 524288, 1048576, 7340032]
-
-    slice_idx = max(0, ratio - 1)
-
-    sizes = {
-        "upload": up_sizes[slice_idx:],
-        "download": [350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000],
-    }
-
-    size_count = len(sizes["upload"])
-    if size_count == 0:
-        raise SpeedtestConfigError("Upload size list evaluated to empty based on configured ratio.")
-
-    upload_count = math.ceil(upload_max / size_count)
-
-    counts = {"upload": upload_count, "download": int(download.get("threadsperurl", 4))}
-
-    threads = {
-        "upload": int(upload.get("threads", 4)),
-        "download": int(server_config.get("threadcount", 4)) * 2,
-    }
-
-    length = {
-        "upload": int(upload.get("testlength", 10)),
-        "download": int(download.get("testlength", 10)),
-    }
 
     try:
         lat_lon = (float(client["lat"]), float(client["lon"]))
@@ -107,12 +64,6 @@ def fetch_config(opener: Any) -> dict[str, Any]:
 
     parsed_config = {
         "client": client,
-        "ignore_servers": ignore_servers,
-        "sizes": sizes,
-        "counts": counts,
-        "threads": threads,
-        "length": length,
-        "upload_max": upload_count * size_count,
         "lat_lon": lat_lon,
     }
 

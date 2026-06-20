@@ -59,7 +59,9 @@ def shell() -> int:
     # Setup graceful shutdown for threads
     shutdown_event = _register_shutdown_handler()
 
-    threads = 1 if args.single else args.threads
+    threads = (
+        1 if args.single else (args.threads if getattr(args, "threads", None) is not None else 4)
+    )
 
     # Initialize Core Pipeline
     logger.info("Retrieving speedtest.net configuration...")

@@ -39,14 +39,12 @@ def _calculate_distance(origin: tuple[float, float], destination: tuple[float, f
 def fetch_servers(
     opener: OpenerDirector,
     lat_lon: tuple[float, float],
-    ignore_servers: list[int] | None = None,
 ) -> dict[float, list[dict[str, Any]]]:
     """
     Fetch the server list from speedtest.net, parse the XML, calculate
     distances from the client, and return a dictionary grouped and sorted by distance.
     """
 
-    ignore_servers = ignore_servers or []
     urls = [
         "https://c.speedtest.net/speedtest-servers-static.php",
         "https://www.speedtest.net/speedtest-servers-static.php",
@@ -82,7 +80,7 @@ def fetch_servers(
             attrib = server.attrib
             server_id = int(attrib.get("id", 0))
 
-            if not server_id or server_id in ignore_servers:
+            if not server_id:
                 continue
 
             try:

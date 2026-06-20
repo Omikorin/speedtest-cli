@@ -2,6 +2,7 @@ import threading
 from typing import Any
 
 from speedtest.engine.config import fetch_config
+from speedtest.engine.config_new import get_config
 from speedtest.engine.results import SpeedtestResults
 from speedtest.engine.servers import fetch_servers, get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
@@ -16,7 +17,6 @@ class Speedtest:
 
     def __init__(
         self,
-        config: dict[str, Any] | None = None,
         source_address: str | None = None,
         timeout: float = 10.0,
         shutdown_event: threading.Event | None = None,
@@ -31,8 +31,7 @@ class Speedtest:
 
         # Fetch default configuration and safely merge optional overrides
         self.config = fetch_config(self._opener) or {}
-        if config:
-            self.config.update(config)
+        # self.config = get_config()
 
         self.lat_lon = self.config.get("lat_lon") or (0.0, 0.0)
 
@@ -60,12 +59,9 @@ class Speedtest:
         and optionally filter down to a specific server ID.
         """
 
-        ignore = self.config.get("ignore_servers", [])
-
         self.servers = fetch_servers(
             opener=self._opener,
             lat_lon=self.lat_lon,
-            ignore_servers=ignore,
         )
 
         # Flatten the distance-grouped dict into a clean linear list sorted by proximity
@@ -112,7 +108,6 @@ class Speedtest:
 
         bytes_received, download_speed = run_download_test(
             best_server_url=best_url,
-            config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
             threads=self._threads,
@@ -132,7 +127,6 @@ class Speedtest:
 
         bytes_sent, upload_speed = run_upload_test(
             best_server_url=best_url,
-            config=self.config,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
             threads=self._threads,

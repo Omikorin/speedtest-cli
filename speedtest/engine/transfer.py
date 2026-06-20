@@ -2,6 +2,7 @@
 Handles multi-threaded execution of download and upload tests.
 """
 
+import math
 import os
 import threading
 import time
@@ -18,7 +19,6 @@ __all__ = ["run_download_test", "run_upload_test"]
 
 def run_download_test(
     best_server_url: str,
-    config: dict[str, Any],
     opener: OpenerDirector | None,
     shutdown_event: threading.Event | None,
     threads: int | None = None,
@@ -32,20 +32,21 @@ def run_download_test(
 
     base_url = os.path.dirname(best_server_url)
 
-    sizes = config.get("sizes", {}).get("download", [])
-    counts = config.get("counts", {}).get("download", 4)
+    # config.sizes.download
+    sizes = [350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
+    counts = 4  # config.counts.download
 
     for size in sizes:
         for _ in range(counts):
             urls.append(f"{base_url}/random{size}x{size}.jpg")
 
     requests = [build_request(url, bump=str(i)) for i, url in enumerate(urls)]
-    max_threads = threads or config.get("threads", {}).get("download", 4)
+    max_threads = threads
 
     bytes_received = 0
     start = time.monotonic()
 
-    test_length = config.get("length", {}).get("download", 10)
+    test_length = 10  # config.length.download
 
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         futures = [
@@ -71,16 +72,11 @@ def run_download_test(
     elapsed = max(stop - start, 0.001)
     download_speed = (bytes_received / elapsed) * 8.0
 
-    # Legacy behavior: Adapt upload thread count dynamically based on download performance
-    if download_speed > 100000 and "threads" in config:
-        config["threads"]["upload"] = 8
-
     return bytes_received, download_speed
 
 
 def run_upload_test(
     best_server_url: str,
-    config: dict[str, Any],
     opener: OpenerDirector | None,
     shutdown_event: threading.Event | None,
     threads: int | None = None,
@@ -90,20 +86,21 @@ def run_upload_test(
     Returns a tuple of (bytes_sent, upload_speed_bps).
     """
 
-    raw_sizes = [
-        size
-        for size in config.get("sizes", {}).get("upload", [])
-        for _ in range(config.get("counts", {}).get("upload", 1))
-    ]
+    tmp_upload_max = 50  # maxchunkcount, same situation
+    tmp_sizes = [524288, 1048576, 7340032]
+    tmp_size_count = len(tmp_sizes)
+    tmp_upload_count = math.ceil(tmp_upload_max / tmp_size_count)
+
+    raw_sizes = [size for size in tmp_sizes for _ in range(tmp_upload_count)]
 
     # Truncate to the exact maximum needed BEFORE looping to save RAM overhead
-    request_count = config.get("upload_max", len(raw_sizes))
+    request_count = 50  # maxchunkcount
     sizes = raw_sizes[:request_count]
 
     requests: list[Request] = []
     payloads: list[HTTPUploaderData] = []
 
-    test_length = config.get("length", {}).get("upload", 10)
+    test_length = 10  # config.length.upload
 
     # Prepare requests and allocate payloads before starting the clock
     for size in sizes:
@@ -120,7 +117,7 @@ def run_upload_test(
         requests.append(req)
         payloads.append(data)
 
-    max_threads = threads or config.get("threads", {}).get("upload", 4)
+    max_threads = threads
     bytes_sent = 0
 
     start = time.monotonic()
