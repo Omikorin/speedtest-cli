@@ -22,8 +22,6 @@ class Speedtest:
         shutdown_event: threading.Event | None = None,
         threads: int | None = None,
     ):
-        self._source_address = source_address
-        self._timeout = timeout
         self._shutdown_event = shutdown_event or threading.Event()
         self._threads = threads
 
