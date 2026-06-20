@@ -1,71 +1,50 @@
 """
-Retrieves and parses the core configuration XML from speedtest.net.
+Retrieves and parses the core configuration JSON from speedtest.net.
 """
 
-import xml.etree.ElementTree as ET
+import json
+from json import JSONDecodeError
 from typing import Any
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
-from speedtest.exceptions import ConfigRetrievalError, SpeedtestConfigError
-from speedtest.http.request import build_request, catch_request
-from speedtest.http.response import get_response_stream
-from speedtest.utils.logger import logger
+from speedtest.http.request import build_user_agent
+from speedtest.models import SpeedtestConfig
 
-__all__ = ["fetch_config"]
+CONFIG_URL = "https://www.speedtest.net/api/js/config-sdk"
 
 
-def fetch_config(opener: Any) -> dict[str, Any]:
+class ConfigFetchError(Exception):
+    """Raised when the configuration cannot be retrieved or parsed."""
+
+    pass
+
+
+def fetch_raw_config(url: str = CONFIG_URL) -> dict[str, Any]:
     """
-    Download the speedtest.net configuration, parse the XML,
-    and return a standardized dictionary of settings.
+    Fetches the JSON configuration from the Speedtest API.
     """
 
-    headers = {"Accept-Encoding": "gzip"}
-    request = build_request(
-        "https://www.speedtest.net/speedtest-config.php",
-        headers=headers,
-    )
+    user_agent = build_user_agent()
 
-    uh, e = catch_request(request, opener=opener)
-    if e or not uh:
-        raise ConfigRetrievalError(e) from e
-
-    with uh:
-        if int(getattr(uh, "code", 200)) != 200:
-            raise ConfigRetrievalError(f"HTTP Error {uh.code} while fetching config")  # type: ignore
-
-        try:
-            with get_response_stream(uh) as stream:
-                configxml = stream.read()
-        except (OSError, EOFError) as err:
-            raise ConfigRetrievalError(err) from err
-
-    logger.debug(f"Config XML:\n{configxml.decode(errors='ignore')}")
+    req = Request(url, headers={"User-Agent": user_agent, "Accept": "application/json"})
 
     try:
-        root = ET.fromstring(configxml)
-    except ET.ParseError as err:
-        raise SpeedtestConfigError(f"Malformed speedtest.net configuration: {err}")
+        with urlopen(req, timeout=10.0) as response:
+            if response.status != 200:
+                raise ConfigFetchError(f"HTTP {response.status}: Failed to fetch config.")
 
-    client_node = root.find("client")
+            body = response.read().decode("utf-8")
+            return json.loads(body)
 
-    if not all([
-        client_node is not None,
-    ]):
-        raise SpeedtestConfigError("Missing expected XML tags in the config payload.")
+    except (URLError, JSONDecodeError) as e:
+        raise ConfigFetchError(f"Failed to retrieve or parse config: {e}") from e
 
-    client = client_node.attrib  # type: ignore
 
-    try:
-        lat_lon = (float(client["lat"]), float(client["lon"]))
-    except (ValueError, KeyError) as err:
-        raise SpeedtestConfigError(
-            f"Unknown location: lat={client.get('lat')} lon={client.get('lon')}"
-        ) from err
+def get_config() -> SpeedtestConfig:
+    """
+    Orchestrates fetching the raw data and building the strict dataclass models.
+    """
 
-    parsed_config = {
-        "client": client,
-        "lat_lon": lat_lon,
-    }
-
-    logger.debug(f"Config:\n{parsed_config}")
-    return parsed_config
+    raw_data = fetch_raw_config()
+    return SpeedtestConfig.from_dict(raw_data)

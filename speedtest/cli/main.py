@@ -79,11 +79,11 @@ def shell() -> int:
         return handle_server_list(st)
 
     # Execute Standard Pipeline
-    client_cfg = st.config.get("client", {})
-    logger.info(
-        f"Testing from {client_cfg.get('isp', 'Unknown ISP')} "
-        f"({client_cfg.get('ip', 'Unknown IP')})..."
-    )
+    # client_cfg = st.config.get("client", {})
+    # logger.info(
+    #     f"Testing from {client_cfg.get('isp', 'Unknown ISP')} "
+    #     f"({client_cfg.get('ip', 'Unknown IP')})..."
+    # )
 
     select_server(st, server=args.server)
 

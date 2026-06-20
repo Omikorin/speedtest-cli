@@ -1,8 +1,7 @@
 import threading
 from typing import Any
 
-from speedtest.engine.config import fetch_config
-from speedtest.engine.config_new import get_config
+from speedtest.engine.config import get_config
 from speedtest.engine.results import SpeedtestResults
 from speedtest.engine.servers import fetch_servers, get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
@@ -30,10 +29,9 @@ class Speedtest:
         self._opener = build_opener(source_address, timeout)
 
         # Fetch default configuration and safely merge optional overrides
-        self.config = fetch_config(self._opener) or {}
-        # self.config = get_config()
+        self.config = get_config()
 
-        self.lat_lon = self.config.get("lat_lon") or (0.0, 0.0)
+        self.lat_lon = (self.config.location.latitude, self.config.location.longitude)
 
         # Core state data structures
         self.servers: dict[float, list[dict[str, Any]]] = {}
