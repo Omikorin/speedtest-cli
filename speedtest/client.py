@@ -41,7 +41,6 @@ class Speedtest:
         self._best: dict[str, Any] = {}
 
         self.results = SpeedtestResults(
-            client=self.config.get("client", {}),
             opener=self._opener,
         )
 

@@ -38,14 +38,12 @@ class SpeedtestResults:
         upload: float = 0.0,
         ping: float = 0.0,
         server: dict[str, Any] | None = None,
-        client: dict[str, str] | None = None,
         opener: OpenerDirector | None = None,
     ):
         self.download = download
         self.upload = upload
         self.ping = ping
         self.server = server or {}
-        self.client = client or {}
 
         self._share: str | None = None
 
@@ -137,7 +135,6 @@ class SpeedtestResults:
             "bytes_sent": self.bytes_sent,
             "bytes_received": self.bytes_received,
             "share": self._share,
-            "client": self.client,
         }
 
     @staticmethod
@@ -154,7 +151,7 @@ class SpeedtestResults:
             "Download",
             "Upload",
             "Share",
-            "IP Address",
+            # "IP Address",
         ]
 
         out = StringIO()
@@ -179,7 +176,6 @@ class SpeedtestResults:
             data.get("download", ""),
             data.get("upload", ""),
             self._share or "",
-            self.client.get("ip", ""),
         ]
 
         out = StringIO()
