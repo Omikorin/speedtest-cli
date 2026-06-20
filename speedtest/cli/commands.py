@@ -29,10 +29,10 @@ SERVER_EXCEPTIONS = (*tuple(HTTP_ERRORS), ServersRetrievalError)
 
 
 def get_speedtest_instance(
-    source: str | None,
-    timeout: float,
-    threads: int | None,
     shutdown_event: threading.Event,
+    threads: int | None = None,
+    source: str | None = None,
+    timeout: float = 10.0,
 ) -> Speedtest:
     """Initialize the Speedtest core and fetch initial configurations."""
 

@@ -91,40 +91,42 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
-    format_group = output_group.add_mutually_exclusive_group()
-    format_group.add_argument(
-        "--csv",
-        action="store_true",
-        help=(
-            "Suppress verbose output, only show basic information "
-            "in CSV format. Speeds listed in bit/s."
-        ),
-    )
-    format_group.add_argument(
-        "--json",
-        action="store_true",
-        help=(
-            "Suppress verbose output, only show basic information "
-            "in JSON format. Speeds listed in bit/s."
-        ),
-    )
+    # format_group = output_group.add_mutually_exclusive_group()
+    # format_group.add_argument(
+    #     "--csv",
+    #     action="store_true",
+    #     help=(
+    #         "Suppress verbose output, only show basic information "
+    #         "in CSV format. Speeds listed in bit/s."
+    #     ),
+    # )
+    # format_group.add_argument(
+    #     "--json",
+    #     action="store_true",
+    #     help=(
+    #         "Suppress verbose output, only show basic information "
+    #         "in JSON format. Speeds listed in bit/s."
+    #     ),
+    # )
 
-    output_group.add_argument(
-        "--csv-delimiter",
-        default=",",
-        type=_single_char_delimiter,
-        help="Single character delimiter to use in CSV output.",
-    )
-    output_group.add_argument(
-        "--csv-header", action="store_true", help="Print CSV headers and exit."
-    )
+    # output_group.add_argument(
+    #     "--csv-delimiter",
+    #     default=",",
+    #     type=_single_char_delimiter,
+    #     help="Single character delimiter to use in CSV output.",
+    # )
+    # output_group.add_argument(
+    #     "--csv-header", action="store_true", help="Print CSV headers and exit."
+    # )
 
-    conn_group = parser.add_argument_group("Connection Options")
-    conn_group.add_argument(
-        "--source", type=str, help="Bind a source IP address to use for connections."
-    )
-    conn_group.add_argument("--timeout", default=10.0, type=float, help="HTTP timeout in seconds.")
-    conn_group.add_argument("--debug", action="store_true", help="Show verbose debugging output.")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    # conn_group = parser.add_argument_group("Connection Options")
+    # conn_group.add_argument(
+    #     "--source", type=str, help="Bind a source IP address to use for connections."
+    # )
+    # conn_group.add_argument("--timeout", default=10.0, type=float, help="HTTP timeout in seconds.")
+
+    misc_group = parser.add_argument_group("Miscellaneous Options")
+    misc_group.add_argument("--debug", action="store_true", help="Show verbose debugging output.")
+    misc_group.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     return parser.parse_args()

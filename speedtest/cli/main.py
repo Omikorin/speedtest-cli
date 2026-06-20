@@ -13,7 +13,7 @@ from speedtest.cli.commands import (
     run_transfer_tests,
     select_server,
 )
-from speedtest.cli.output import csv_header, display_results
+from speedtest.cli.output import display_results
 from speedtest.cli.parser import parse_args
 from speedtest.exceptions import SpeedtestCLIError
 from speedtest.utils.logger import logger, setup_logging
@@ -48,13 +48,14 @@ def shell() -> int:
 
     args = parse_args()
 
-    is_quiet: bool = args.csv or args.json or args.csv_header
-    setup_logging(debug=args.debug, quiet=is_quiet)
+    # is_quiet: bool = args.csv or args.json or args.csv_header
+    # setup_logging(debug=args.debug, quiet=is_quiet)
+    setup_logging(debug=args.debug)
 
     _validate_args(args)
 
-    if args.csv_header:
-        return csv_header(args.csv_delimiter)
+    # if args.csv_header:
+        # return csv_header(args.csv_delimiter)
 
     # Setup graceful shutdown for threads
     shutdown_event = _register_shutdown_handler()
@@ -67,10 +68,10 @@ def shell() -> int:
     logger.info("Retrieving speedtest.net configuration...")
 
     st = get_speedtest_instance(
-        source=args.source,
-        timeout=args.timeout,
-        threads=threads,
         shutdown_event=shutdown_event,
+        threads=threads,
+        # source=args.source,
+        # timeout=args.timeout,
     )
 
     # Handle early-exit commands
@@ -101,9 +102,9 @@ def shell() -> int:
     )
     display_results(
         results=st.results,
-        csv_format=args.csv,
-        json_format=args.json,
-        csv_delimiter=args.csv_delimiter,
+        # csv_format=args.csv,
+        # json_format=args.json,
+        # csv_delimiter=args.csv_delimiter,
         share=args.share,
     )
 
