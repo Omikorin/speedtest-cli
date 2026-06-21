@@ -1,14 +1,14 @@
 """
-Handles fetching, distance calculation, and latency ranking of speedtest.net servers.
+Handles latency ranking of speedtest.net servers.
 """
 
 import time
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
-from urllib.request import OpenerDirector
 
 from speedtest.exceptions import SpeedtestBestServerFailure
-from speedtest.http.request import build_request, build_user_agent, catch_request
+from speedtest.http.request import build_user_agent
 from speedtest.models import Server
 from speedtest.utils.logger import logger
 
@@ -17,59 +17,57 @@ __all__ = ["get_best_server"]
 
 def _ping_server(
     server: Server,
-    opener: OpenerDirector,
-    headers: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
     pings: int = 3,
 ) -> tuple[Server, float]:
-    """Ping a single server multiple times and return the average latency."""
+    """Ping a single server multiple times and return the average latency in milliseconds."""
 
-    headers = headers or {}
-    url: str = server.url.replace("upload.php", "latency.txt")
+    if not server.url:
+        return server, 3600000.0  # 1 hour penalty in ms
 
-    if not url:
-        return server, 3600.0
-
-    latencies = []
+    base_url = server.url.replace("upload.php", "latency.txt")
+    latencies: list[float] = []
+    req_headers = headers or {}
 
     for i in range(pings):
-        request = build_request(url, headers=headers, bump=str(i))
-        start = time.monotonic()
+        cache_buster = int(time.time() * 1000)
+        target_url = f"{base_url}?x={cache_buster}.{i}"
 
-        uh, e = catch_request(request, opener=opener)
+        req = urllib.request.Request(target_url, headers=req_headers)
+        start_time = time.monotonic()
 
-        if e or not uh:
+        try:
+            with urllib.request.urlopen(req, timeout=5.0) as response:
+                if response.status == 200:
+                    response.read()
+                    latencies.append(time.monotonic() - start_time)
+                else:
+                    latencies.append(3600.0)
+
+        except urllib.error.URLError:
             latencies.append(3600.0)
-            continue
 
-        with uh:
-            if int(getattr(uh, "code", 500)) != 200:
-                latencies.append(3600.0)
-                continue
+    avg_latency_s = sum(latencies) / len(latencies) if latencies else 3600.0
 
-            latency = time.monotonic() - start
-            latencies.append(latency)
-
-    # in milliseconds
-    avg_latency = sum(latencies) / len(latencies) * 1000.0
-
-    return server, avg_latency
+    return server, avg_latency_s * 1000.0
 
 
-def get_best_server(closest_servers: list[Server], opener: OpenerDirector) -> tuple[Server, float]:
+def get_best_server(closest_servers: list[Server]) -> tuple[Server, float]:
     """
     Concurrently ping the closest servers to determine which has the lowest latency.
     """
 
+    if not closest_servers:
+        raise SpeedtestBestServerFailure("No servers provided to ping.")
+
     best_server = None
     lowest_latency = float("inf")
 
-    user_agent = build_user_agent()
-    headers = {"User-Agent": user_agent}
+    headers = {"User-Agent": build_user_agent()}
 
     with ThreadPoolExecutor(max_workers=len(closest_servers)) as executor:
         future_to_server = {
-            executor.submit(_ping_server, server, opener, headers): server
-            for server in closest_servers
+            executor.submit(_ping_server, server, headers): server for server in closest_servers
         }
 
         for future in as_completed(future_to_server):

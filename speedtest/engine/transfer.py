@@ -3,13 +3,12 @@ Handles multi-threaded execution of download and upload tests.
 """
 
 import math
-import os
 import threading
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.request import OpenerDirector, Request
 
-from speedtest.http.request import build_request
+from speedtest.http.request import build_user_agent
 from speedtest.http.workers import HTTPUploaderData, download_worker, upload_worker
 from speedtest.utils.logger import logger
 
@@ -18,8 +17,7 @@ __all__ = ["run_download_test", "run_upload_test"]
 
 def run_download_test(
     best_server_url: str,
-    opener: OpenerDirector | None,
-    shutdown_event: threading.Event | None,
+    shutdown_event: threading.Event | None = None,
     threads: int | None = None,
 ) -> tuple[int, float]:
     """
@@ -27,36 +25,33 @@ def run_download_test(
     Returns a tuple of (bytes_received, download_speed_bps).
     """
 
-    urls: list[str] = []
+    if not best_server_url:
+        return 0, 0.0
 
-    base_url = os.path.dirname(best_server_url)
+    base_url = best_server_url.rsplit("/", 1)[0]
 
-    # config.sizes.download
     sizes = [350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
-    counts = 4  # config.counts.download
+    counts = 4
+    test_length = 10.0  # seconds
+
+    headers = {"User-Agent": build_user_agent(), "Cache-Control": "no-cache"}
+    requests: list[urllib.request.Request] = []
+
+    timestamp = int(time.time() * 1000)
+    req_id = 0
 
     for size in sizes:
         for _ in range(counts):
-            urls.append(f"{base_url}/random{size}x{size}.jpg")
-
-    requests = [build_request(url, bump=str(i)) for i, url in enumerate(urls)]
-    max_threads = threads
+            url = f"{base_url}/random{size}x{size}.jpg?x={timestamp}.{req_id}"
+            requests.append(urllib.request.Request(url, headers=headers))
+            req_id += 1
 
     bytes_received = 0
-    start = time.monotonic()
+    start_time = time.monotonic()
 
-    test_length = 10  # config.length.download
-
-    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+    with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = [
-            executor.submit(
-                download_worker,
-                req,
-                start,
-                test_length,
-                opener=opener,
-                shutdown_event=shutdown_event,
-            )
+            executor.submit(download_worker, req, start_time, test_length, shutdown_event)
             for req in requests
         ]
 
@@ -66,18 +61,20 @@ def run_download_test(
             except Exception as e:
                 logger.debug(f"Download thread failed: {e}")
 
-    stop = time.monotonic()
+            if shutdown_event and shutdown_event.is_set():
+                break
 
-    elapsed = max(stop - start, 0.001)
-    download_speed = (bytes_received / elapsed) * 8.0
+    stop_time = time.monotonic()
+    elapsed = max(stop_time - start_time, 0.001)
 
-    return bytes_received, download_speed
+    download_speed_bps = (bytes_received / elapsed) * 8.0
+
+    return bytes_received, download_speed_bps
 
 
 def run_upload_test(
     best_server_url: str,
-    opener: OpenerDirector | None,
-    shutdown_event: threading.Event | None,
+    shutdown_event: threading.Event | None = None,
     threads: int | None = None,
 ) -> tuple[int, float]:
     """
@@ -85,59 +82,58 @@ def run_upload_test(
     Returns a tuple of (bytes_sent, upload_speed_bps).
     """
 
-    tmp_upload_max = 50  # maxchunkcount, same situation
-    tmp_sizes = [524288, 1048576, 7340032]
-    tmp_size_count = len(tmp_sizes)
-    tmp_upload_count = math.ceil(tmp_upload_max / tmp_size_count)
+    if not best_server_url:
+        return 0, 0.0
+
+    tmp_sizes = [524288, 1048576, 7340032]  # 0.5MB, 1MB, 7MB
+    request_count = 50
+    tmp_upload_count = math.ceil(request_count / len(tmp_sizes))
 
     raw_sizes = [size for size in tmp_sizes for _ in range(tmp_upload_count)]
-
-    # Truncate to the exact maximum needed BEFORE looping to save RAM overhead
-    request_count = 50  # maxchunkcount
     sizes = raw_sizes[:request_count]
 
-    requests: list[Request] = []
+    requests: list[urllib.request.Request] = []
     payloads: list[HTTPUploaderData] = []
 
-    test_length = 10  # config.length.upload
+    test_length = 10.0  # seconds
+    user_agent = build_user_agent()
+    timestamp = int(time.time() * 1000)
+
+    delim = "&" if "?" in best_server_url else "?"
 
     # Prepare requests and allocate payloads before starting the clock
-    for size in sizes:
+    for i, size in enumerate(sizes):
         data = HTTPUploaderData(
             length=size,
-            start_time=0.0,  # Dummy value; will be updated right before execution
+            start_time=0.0,  # Dummy value; will be stamped right before execution
             timeout=test_length,
             shutdown_event=shutdown_event,
         )
 
-        headers = {"Content-length": str(size)}
-        req = build_request(best_server_url, data, headers=headers)
+        url = f"{best_server_url}{delim}x={timestamp}.{i}"
+
+        headers = {
+            "User-Agent": user_agent,
+            "Content-Length": str(size),
+            "Cache-Control": "no-cache",
+        }
+
+        req = urllib.request.Request(url, data=data, headers=headers)
 
         requests.append(req)
         payloads.append(data)
 
-    max_threads = threads
     bytes_sent = 0
+    start_time = time.monotonic()
 
-    start = time.monotonic()
-
-    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+    with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = []
 
         for req, payload in zip(requests, payloads):
-            # Stamp the real start time immediately before submission
-            payload.start_time = start
+            # Stamp the real start time immediately before thread submission
+            payload.start_time = start_time
 
-            futures.append(
-                executor.submit(
-                    upload_worker,
-                    req,
-                    payload,
-                    test_length,
-                    opener=opener,
-                    shutdown_event=shutdown_event,
-                )
-            )
+            futures.append(executor.submit(upload_worker, req, payload, shutdown_event))
 
         for future in as_completed(futures):
             try:
@@ -145,9 +141,12 @@ def run_upload_test(
             except Exception as e:
                 logger.debug(f"Upload thread failed: {e}")
 
-    stop = time.monotonic()
+            if shutdown_event and shutdown_event.is_set():
+                break
 
-    elapsed = max(stop - start, 0.001)
-    upload_speed = (bytes_sent / elapsed) * 8.0
+    stop_time = time.monotonic()
+    elapsed = max(stop_time - start_time, 0.001)
 
-    return bytes_sent, upload_speed
+    upload_speed_bps = (bytes_sent / elapsed) * 8.0
+
+    return bytes_sent, upload_speed_bps

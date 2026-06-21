@@ -4,16 +4,10 @@ Threadpool worker functions and payload data classes.
 
 import threading
 import time
-from urllib.request import OpenerDirector, Request, urlopen
+import urllib.error
+import urllib.request
 
 from speedtest.exceptions import SpeedtestUploadTimeout
-from speedtest.http.errors import HTTP_ERRORS, UPLOAD_ERRORS
-
-__all__ = [
-    "HTTPUploaderData",
-    "download_worker",
-    "upload_worker",
-]
 
 # --- Constants ---
 CHUNK_SIZE_BYTES = 10240
@@ -22,32 +16,42 @@ UPLOAD_RESPONSE_TRUNCATION = 11
 # A pre-calculated 10.5 KB chunk to satisfy typical urllib read calls
 DUMMY_CHUNK = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 300
 
+__all__ = [
+    "HTTPUploaderData",
+    "download_worker",
+    "upload_worker",
+]
+
 
 def download_worker(
-    request: Request,
+    request: urllib.request.Request,
     start_time: float,
     timeout: float,
-    opener: OpenerDirector | None = None,
     shutdown_event: threading.Event | None = None,
 ) -> int:
     """Worker function for retrieving a URL, returning total bytes downloaded."""
 
-    _opener = opener.open if opener else urlopen
-    _shutdown_event = shutdown_event or threading.Event()
-
     total_downloaded = 0
     deadline = start_time + timeout
 
-    try:
-        if time.monotonic() <= deadline:
-            with _opener(request) as response:
-                while not _shutdown_event.is_set() and time.monotonic() <= deadline:
-                    chunk = response.read(CHUNK_SIZE_BYTES)
-                    if not chunk:
-                        break
+    remaining_time = deadline - time.monotonic()
 
-                    total_downloaded += len(chunk)
-    except HTTP_ERRORS:
+    if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
+        return 0
+
+    try:
+        with urllib.request.urlopen(request, timeout=remaining_time) as response:
+            while time.monotonic() <= deadline:
+                if shutdown_event and shutdown_event.is_set():
+                    break
+
+                chunk = response.read(CHUNK_SIZE_BYTES)
+                if not chunk:
+                    break
+
+                total_downloaded += len(chunk)
+
+    except (urllib.error.URLError, TimeoutError, OSError):
         pass
 
     return total_downloaded
@@ -103,26 +107,25 @@ class HTTPUploaderData:
 
 
 def upload_worker(
-    request: Request,
+    request: urllib.request.Request,
     payload_data: HTTPUploaderData,
-    timeout: float,
-    opener: OpenerDirector | None = None,
     shutdown_event: threading.Event | None = None,
 ) -> int:
-    """Worker function for putting a URL, returning total bytes uploaded."""
+    """Worker function for POSTing a payload, returning total bytes uploaded."""
 
-    _opener = opener.open if opener else urlopen
-    _shutdown_event = shutdown_event or threading.Event()
+    remaining_time = payload_data.deadline - time.monotonic()
+
+    if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
+        return 0
 
     request.data = payload_data
     request.method = "POST"
 
     try:
-        if time.monotonic() <= payload_data.deadline and not _shutdown_event.is_set():
-            with _opener(request) as response:
-                response.read(UPLOAD_RESPONSE_TRUNCATION)
-            return payload_data.total_bytes_read
+        with urllib.request.urlopen(request, timeout=remaining_time) as response:
+            response.read(UPLOAD_RESPONSE_TRUNCATION)
 
-        return 0
-    except UPLOAD_ERRORS:
+        return payload_data.total_bytes_read
+
+    except (urllib.error.URLError, TimeoutError, OSError):
         return payload_data.total_bytes_read

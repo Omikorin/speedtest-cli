@@ -8,7 +8,6 @@ from operator import attrgetter
 from speedtest.engine.servers import get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
 from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
-from speedtest.http.handlers import build_opener
 from speedtest.models import Server, SpeedtestConfig, TestResult
 
 __all__ = ["SpeedtestClient"]
@@ -18,7 +17,6 @@ class SpeedtestClient:
     """Stateless network client for performing speedtest.net operations."""
 
     def __init__(self, shutdown_event: threading.Event | None = None):
-        self._opener = build_opener()
         self._shutdown_event = shutdown_event or threading.Event()
 
     def get_target_servers(
@@ -41,7 +39,7 @@ class SpeedtestClient:
         if not servers:
             raise SpeedtestCLIError("No servers provided to test against.")
 
-        best_server, latency = get_best_server(servers, self._opener)
+        best_server, latency = get_best_server(servers)
 
         if not best_server:
             raise SpeedtestCLIError("Failed to identify a valid best server.")
@@ -55,10 +53,7 @@ class SpeedtestClient:
             raise SpeedtestCLIError("The target server is missing a valid URL.")
 
         return run_download_test(
-            best_server_url=server.url,
-            opener=self._opener,
-            shutdown_event=self._shutdown_event,
-            threads=threads,
+            best_server_url=server.url, shutdown_event=self._shutdown_event, threads=threads
         )
 
     def upload(self, server: Server, threads: int) -> tuple[int, float]:
@@ -68,10 +63,7 @@ class SpeedtestClient:
             raise SpeedtestCLIError("The target server is missing a valid URL.")
 
         return run_upload_test(
-            best_server_url=server.url,
-            opener=self._opener,
-            shutdown_event=self._shutdown_event,
-            threads=threads,
+            best_server_url=server.url, shutdown_event=self._shutdown_event, threads=threads
         )
 
     def generate_share_link(self, results: TestResult) -> str:
