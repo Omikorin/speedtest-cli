@@ -40,7 +40,7 @@ def shell() -> int:
     ctx = RunContext.from_args(raw_args)
     results = TestResult()
 
-    setup_logging(debug=ctx.debug_mode)
+    setup_logging(debug=ctx.debug_mode, quiet=ctx.is_quiet)
     shutdown_event = _register_shutdown_handler()
 
     client = SpeedtestClient(
@@ -86,7 +86,13 @@ def shell() -> int:
             logger.info("Generating share link...")
             results.share_url = client.generate_share_link(results)
 
-        display_results(results=results, units=ctx.units, share=ctx.share)
+        display_results(
+            results=results,
+            units=ctx.units,
+            share=ctx.share,
+            json_output=ctx.json_output,
+            client_config=ctx.api_config,
+        )
 
         return ExitStatus.SUCCESS.value
 

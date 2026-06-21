@@ -81,15 +81,15 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
-    # format_group = output_group.add_mutually_exclusive_group()
-    # format_group.add_argument(
-    #     "--json",
-    #     action="store_true",
-    #     help=(
-    #         "Suppress verbose output, only show basic information "
-    #         "in JSON format. Speeds listed in bit/s."
-    #     ),
-    # )
+    format_group = output_group.add_mutually_exclusive_group()
+    format_group.add_argument(
+        "--json",
+        action="store_true",
+        help=(
+            "Suppress verbose output, only show basic information "
+            "in JSON format. Speeds listed in bit/s."
+        ),
+    )
 
     # conn_group = parser.add_argument_group("Connection Options")
     # conn_group.add_argument(

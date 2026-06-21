@@ -95,7 +95,7 @@ class RunContext:
     # Execution modes
     list_servers_only: bool
     debug_mode: bool
-    # is_quiet: bool
+    is_quiet: bool
 
     # Test parameters
     target_server_id: int | None
@@ -105,6 +105,7 @@ class RunContext:
 
     # Output
     share: bool
+    json_output: bool
     units: tuple[str, int]  # e.g., ("bit", 1) or ("byte", 8)
 
     # Connection options
@@ -130,12 +131,13 @@ class RunContext:
         return cls(
             list_servers_only=args.list,
             debug_mode=args.debug,
-            # is_quiet=getattr(args, "json", False),
+            is_quiet=args.json,
             target_server_id=args.server,
             no_download=args.no_download,
             no_upload=args.no_upload,
             threads=threads,
             share=args.share,
+            json_output=args.json,
             units=args.units,
             # source_ip=getattr(args, "source", None),
             # timeout=getattr(args, "timeout", 10.0),
