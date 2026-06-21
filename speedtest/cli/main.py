@@ -86,7 +86,7 @@ def shell() -> int:
         if ctx.json_output:
             final_output = format_json(results, ctx.api_config)
         else:
-            final_output = format_text(results, ctx.units, ctx.share)
+            final_output = format_text(results, ctx.units)
 
         print(final_output)
 

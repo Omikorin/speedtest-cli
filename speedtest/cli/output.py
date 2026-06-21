@@ -39,7 +39,7 @@ def format_json(results: TestResult, client_config: SpeedtestConfig | None = Non
     return json.dumps(json_data, indent=indent)
 
 
-def format_text(results: TestResult, units: tuple[str, int], share: bool) -> str:
+def format_text(results: TestResult, units: tuple[str, int]) -> str:
     """Format the human-readable text representation as a string."""
 
     unit_name, unit_divisor = units
