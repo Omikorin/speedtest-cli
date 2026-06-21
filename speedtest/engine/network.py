@@ -1,60 +1,48 @@
+# speedtest/engine/network.py
+
 """
-Threadpool worker functions and payload data classes.
+Low-level network utilities, HTTP workers, and payload generation.
 """
 
+import platform
 import threading
 import time
 import urllib.error
 import urllib.request
+from functools import cache
 
+from speedtest import __version__
 from speedtest.exceptions import SpeedtestUploadTimeout
+from speedtest.utils.logger import logger
 
 # --- Constants ---
 CHUNK_SIZE_BYTES = 10240
 UPLOAD_RESPONSE_TRUNCATION = 11
-
-# A pre-calculated 10.5 KB chunk to satisfy typical urllib read calls
 DUMMY_CHUNK = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 300
 
 __all__ = [
     "HTTPUploaderData",
+    "build_user_agent",
     "download_worker",
     "upload_worker",
 ]
 
 
-def download_worker(
-    request: urllib.request.Request,
-    start_time: float,
-    timeout: float,
-    shutdown_event: threading.Event | None = None,
-) -> int:
-    """Worker function for retrieving a URL, returning total bytes downloaded."""
+@cache
+def build_user_agent() -> str:
+    """Build and cache a User-Agent string."""
 
-    total_downloaded = 0
-    deadline = start_time + timeout
+    system = platform.system() or "UnknownOS"
+    machine = platform.machine() or "UnknownArch"
 
-    remaining_time = deadline - time.monotonic()
+    user_agent = (
+        f"Mozilla/5.0 ({system}; {machine}) "
+        f"Python/{platform.python_version()} "
+        f"speedtest-cli/{__version__}"
+    )
 
-    if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
-        return 0
-
-    try:
-        with urllib.request.urlopen(request, timeout=remaining_time) as response:
-            while time.monotonic() <= deadline:
-                if shutdown_event and shutdown_event.is_set():
-                    break
-
-                chunk = response.read(CHUNK_SIZE_BYTES)
-                if not chunk:
-                    break
-
-                total_downloaded += len(chunk)
-
-    except (urllib.error.URLError, TimeoutError):
-        pass
-
-    return total_downloaded
+    logger.debug(f"User-Agent: {user_agent}")
+    return user_agent
 
 
 class HTTPUploaderData:
@@ -107,6 +95,40 @@ class HTTPUploaderData:
 
     def __len__(self) -> int:
         return self.length
+
+
+def download_worker(
+    request: urllib.request.Request,
+    start_time: float,
+    timeout: float,
+    shutdown_event: threading.Event | None = None,
+) -> int:
+    """Worker function for retrieving a URL, returning total bytes downloaded."""
+
+    total_downloaded = 0
+    deadline = start_time + timeout
+
+    remaining_time = deadline - time.monotonic()
+
+    if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
+        return 0
+
+    try:
+        with urllib.request.urlopen(request, timeout=remaining_time) as response:
+            while time.monotonic() <= deadline:
+                if shutdown_event and shutdown_event.is_set():
+                    break
+
+                chunk = response.read(CHUNK_SIZE_BYTES)
+                if not chunk:
+                    break
+
+                total_downloaded += len(chunk)
+
+    except (urllib.error.URLError, TimeoutError):
+        pass
+
+    return total_downloaded
 
 
 def upload_worker(

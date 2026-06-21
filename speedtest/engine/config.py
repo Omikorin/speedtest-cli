@@ -8,7 +8,7 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-from speedtest.http.request import build_user_agent
+from speedtest.engine.network import build_user_agent
 from speedtest.models import SpeedtestConfig
 
 CONFIG_URL = "https://www.speedtest.net/api/js/config-sdk"

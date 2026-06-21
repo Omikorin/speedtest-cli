@@ -7,8 +7,8 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from speedtest.engine.network import build_user_agent
 from speedtest.exceptions import SpeedtestBestServerFailure
-from speedtest.http.request import build_user_agent
 from speedtest.models import Server
 from speedtest.utils.logger import logger
 
