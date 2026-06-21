@@ -72,7 +72,7 @@ class HTTPUploaderData:
         self.length = length
         self.start_time = start_time
         self.timeout = timeout
-        self._shutdown_event = shutdown_event or threading.Event()
+        self._shutdown_event = shutdown_event
         self.total_bytes_read = 0
 
     @property
@@ -84,22 +84,25 @@ class HTTPUploaderData:
     def read(self, n: int = -1) -> bytes:
         """Yield dynamic chunks of dummy data until length or timeout is reached."""
 
-        if time.monotonic() > self.deadline or self._shutdown_event.is_set():
+        if time.monotonic() > self.deadline or (
+            self._shutdown_event and self._shutdown_event.is_set()
+        ):
             raise SpeedtestUploadTimeout()
 
         remaining = self.length - self.total_bytes_read
         if remaining <= 0:
             return b""
 
-        # If n is negative or larger than remaining, read everything left.
-        read_size = remaining if (n < 0 or n > remaining) else n
+        max_alloc = len(DUMMY_CHUNK)
 
-        if read_size <= len(DUMMY_CHUNK):
-            chunk = DUMMY_CHUNK[:read_size]
+        if n < 0 or n > remaining:
+            read_size = min(remaining, max_alloc)
         else:
-            chunk = b"A" * read_size
+            read_size = min(n, remaining, max_alloc)
 
-        self.total_bytes_read += len(chunk)
+        chunk = DUMMY_CHUNK[:read_size]
+
+        self.total_bytes_read += read_size
         return chunk
 
     def __len__(self) -> int:
@@ -118,14 +121,11 @@ def upload_worker(
     if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
         return 0
 
-    request.data = payload_data
-    request.method = "POST"
-
     try:
         with urllib.request.urlopen(request, timeout=remaining_time) as response:
             response.read(UPLOAD_RESPONSE_TRUNCATION)
 
         return payload_data.total_bytes_read
 
-    except (urllib.error.URLError, TimeoutError, OSError):
+    except (urllib.error.URLError, TimeoutError, OSError, SpeedtestUploadTimeout):
         return payload_data.total_bytes_read

@@ -118,7 +118,7 @@ def run_upload_test(
             "Cache-Control": "no-cache",
         }
 
-        req = urllib.request.Request(url, data=data, headers=headers)
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
         requests.append(req)
         payloads.append(data)
