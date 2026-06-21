@@ -140,3 +140,25 @@ class RunContext:
             # source_ip=getattr(args, "source", None),
             # timeout=getattr(args, "timeout", 10.0),
         )
+
+
+@dataclass(kw_only=True)
+class TestResult:
+    # Populated after ping phase
+    server: Server | None = None
+    ping_ms: float | None = None
+
+    # Populated after transfer phases
+    download_bps: float | None = None
+    download_bytes: int | None = None
+
+    upload_bps: float | None = None
+    upload_bytes: int | None = None
+
+    share_url: str | None = None
+
+    @property
+    def is_complete(self) -> bool:
+        """Helper to check if all tests ran."""
+
+        return all(x is not None for x in (self.ping_ms, self.download_bps, self.upload_bps))

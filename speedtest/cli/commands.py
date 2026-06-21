@@ -2,63 +2,17 @@
 Wraps the core Speedtest logic into CLI actions.
 """
 
-import threading
-
-from speedtest.cli.output import convert_speed
-from speedtest.client import Speedtest
-from speedtest.exceptions import (
-    ConfigRetrievalError,
-    NoMatchedServer,
-    ServersRetrievalError,
-    SpeedtestCLIError,
-)
-from speedtest.http.errors import HTTP_ERRORS
-from speedtest.utils.logger import logger
+from speedtest.models import Server
 from speedtest.utils.status import ExitStatus
 
-__all__ = [
-    "get_speedtest_instance",
-    "handle_server_list",
-    "run_transfer_tests",
-    "select_server",
-]
-
-# Exception groupings for cleaner try/except blocks
-CONFIG_EXCEPTIONS = (*tuple(HTTP_ERRORS), ConfigRetrievalError)
-SERVER_EXCEPTIONS = (*tuple(HTTP_ERRORS), ServersRetrievalError)
+__all__ = ["handle_server_list"]
 
 
-def get_speedtest_instance(
-    shutdown_event: threading.Event,
-    threads: int | None = None,
-    source: str | None = None,
-    timeout: float = 10.0,
-) -> Speedtest:
-    """Initialize the Speedtest core and fetch initial configurations."""
-
-    try:
-        return Speedtest(
-            source_address=source,
-            timeout=timeout,
-            threads=threads,
-            shutdown_event=shutdown_event,
-        )
-    except CONFIG_EXCEPTIONS as e:
-        logger.error("Cannot retrieve speedtest configuration")
-        raise SpeedtestCLIError(e) from e
-
-
-def handle_server_list(st: Speedtest) -> int:
+def handle_server_list(servers: list[Server]) -> int:
     """Handle the --list argument by printing nearby servers and exiting."""
 
     try:
-        st.get_servers()
-    except SERVER_EXCEPTIONS as e:
-        logger.error("Cannot retrieve speedtest server list")
-        raise SpeedtestCLIError(e) from e
-
-    try:
-        for server in st.sorted_servers:
+        for server in servers:
             line = (
                 f"{server.id:>5}) {server.sponsor} "
                 f"({server.name}, {server.country}) "
@@ -66,54 +20,7 @@ def handle_server_list(st: Speedtest) -> int:
             )
             print(line)
     except BrokenPipeError:
+        # Prevents messy tracebacks if the user pipes output to `head` or `less`
         pass
 
     return ExitStatus.SUCCESS.value
-
-
-def select_server(st: Speedtest, server: int | None = None) -> None:
-    """Fetch servers and filter down to the best candidate."""
-
-    logger.info("Retrieving speedtest.net server list...")
-    try:
-        st.get_servers(server=server)
-    except NoMatchedServer as e:
-        raise e
-    except SERVER_EXCEPTIONS as e:
-        logger.error("Cannot retrieve speedtest server list")
-        raise SpeedtestCLIError(e) from e
-
-    if server is not None:
-        logger.info("Retrieving information for the selected server...")
-    else:
-        logger.info("Selecting best server based on ping...")
-
-    st.get_best_server()
-
-
-def run_transfer_tests(
-    st: Speedtest,
-    no_download: bool = False,
-    no_upload: bool = False,
-    units: tuple[str, int] = ("bits", 1),
-) -> None:
-    """Execute download and upload test sequences."""
-
-    results = st.results
-    unit_name, unit_divisor = units
-
-    if no_download:
-        logger.info("Skipping download test")
-    else:
-        logger.info("Testing download speed")
-        st.download()
-        download_speed = convert_speed(results.download, unit_divisor)
-        logger.info(f"Download: {download_speed:.2f} M{unit_name}/s")
-
-    if no_upload:
-        logger.info("Skipping upload test")
-    else:
-        logger.info("Testing upload speed")
-        st.upload()
-        upload_speed = convert_speed(results.upload, unit_divisor)
-        logger.info(f"Upload: {upload_speed:.2f} M{unit_name}/s")

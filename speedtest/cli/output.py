@@ -2,7 +2,9 @@
 Handles formatting, printing, and JSON output.
 """
 
-from speedtest.engine.results import SpeedtestResults
+import dataclasses
+
+from speedtest.models import TestResult
 from speedtest.utils.logger import logger
 
 __all__ = ["convert_speed", "display_results"]
@@ -15,20 +17,33 @@ def convert_speed(speed_bps: float, unit_divisor: int) -> float:
 
 
 def display_results(
-    results: SpeedtestResults,
-    json_format: bool = False,
+    results: TestResult,
+    units: tuple[str, int],
     share: bool = False,
+    json_format: bool = False,
 ) -> None:
     """Render the final output to the user based on requested format (JSON, Text)."""
 
-    logger.debug(f"Results:\n{results.to_dict()!r}")
+    logger.debug(f"Results:\n{dataclasses.asdict(results)!r}")
 
-    share_link = None
-    if share:
-        share_link = results.share()
+    unit_name, unit_divisor = units
 
     if json_format:
-        print(results.json())
+        import json
 
-    if share and not (json_format):
-        print(f"Share results: {share_link}")
+        print(json.dumps(dataclasses.asdict(results)))
+        return
+
+    if results.download_bps is not None:
+        dl_speed = convert_speed(results.download_bps, unit_divisor)
+        print(f"Download: {dl_speed:.2f} M{unit_name}/s")
+
+    if results.upload_bps is not None:
+        ul_speed = convert_speed(results.upload_bps, unit_divisor)
+        print(f"Upload: {ul_speed:.2f} M{unit_name}/s")
+
+    if share:
+        if results.share_url:
+            print(f"Share results: {results.share_url}")
+        else:
+            logger.warning("Share URL generation failed or was not executed.")

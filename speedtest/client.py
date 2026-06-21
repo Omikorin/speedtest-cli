@@ -1,144 +1,137 @@
 import threading
+import urllib.error
+import urllib.parse
+import urllib.request
+from hashlib import md5
 from operator import attrgetter
 
-from speedtest.engine.config import get_config
-from speedtest.engine.results import SpeedtestResults
 from speedtest.engine.servers import get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
 from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
 from speedtest.http.handlers import build_opener
-from speedtest.models import Server
+from speedtest.models import Server, SpeedtestConfig, TestResult
 
-__all__ = ["Speedtest"]
+__all__ = ["SpeedtestClient"]
 
 
-class Speedtest:
-    """Class for performing standard speedtest.net testing operations."""
+class SpeedtestClient:
+    """Stateless network client for performing speedtest.net operations."""
 
     def __init__(
         self,
         source_address: str | None = None,
         timeout: float = 10.0,
         shutdown_event: threading.Event | None = None,
-        threads: int | None = None,
     ):
-        self._shutdown_event = shutdown_event or threading.Event()
-        self._threads = threads
-
         self._opener = build_opener(source_address, timeout)
+        self._shutdown_event = shutdown_event or threading.Event()
 
-        # Fetch default configuration and safely merge optional overrides
-        self.config = get_config()
+    def get_target_servers(
+        self, config: SpeedtestConfig, target_id: int | None = None, limit: int = 5
+    ) -> list[Server]:
+        """Sorts available servers by distance and filters by ID if requested."""
 
-        # Core state data structures
-        self.servers: list[Server] = []
-        self.sorted_servers: list[Server] = []
-        self.closest_servers: list[Server] = []
-        self._best: Server | None = None
-        self._best_latency: float = 3600.0
+        servers = sorted(config.servers, key=attrgetter("distance"))
 
-        self.results = SpeedtestResults(
-            opener=self._opener,
-        )
+        if target_id is not None:
+            servers = [srv for srv in servers if srv.id == target_id]
+            if not servers:
+                raise NoMatchedServer(f"No server matched the ID: {target_id}")
 
-    @property
-    def best(self) -> Server:
-        """Lazy-loaded property to retrieve the best available server."""
+        return servers[:limit]
 
-        if not self._best:
-            self.get_best_server()
-        return self._best  # type: ignore
+    def select_best_server(self, servers: list[Server]) -> tuple[Server, float]:
+        """Pings a list of servers and returns the fastest one alongside its latency."""
 
-    def get_sorted_servers(self) -> list[Server]:
-        """
-        Sorts a list of servers by their pre-calculated distance.
-        """
+        if not servers:
+            raise SpeedtestCLIError("No servers provided to test against.")
 
-        self.sorted_servers = sorted(self.servers, key=attrgetter("distance"))
+        best_server, latency = get_best_server(servers, self._opener)
 
-        return self.sorted_servers
-
-    def get_closest_servers(self, limit: int) -> list[Server]:
-        """
-        Returns the top N closest servers.
-        """
-
-        self.closest_servers = self.sorted_servers[:limit]
-
-        return self.closest_servers
-
-    def get_servers(self, server: int | None = None, limit: int = 5) -> list[Server]:
-        """
-        Fetch the server list from speedtest.net, sort them by distance,
-        and optionally filter down to a specific server ID.
-        """
-
-        self.servers = self.config.servers.copy()
-        self.get_sorted_servers()
-        self.get_closest_servers(limit)
-
-        # Filter by a specific server ID if requested
-        if server is not None:
-            self.closest_servers = [srv for srv in self.servers if srv.id == server]
-
-            if not self.closest_servers:
-                raise NoMatchedServer(f"No server matched the ID: {server}")
-
-        return self.servers
-
-    def get_best_server(self, limit: int = 5) -> Server:
-        """Determine the lowest-latency server by pinging the top `limit` closest options."""
-
-        if not self.closest_servers:
-            self.get_servers(limit)
-
-        if not self.closest_servers:
-            raise SpeedtestCLIError("No servers available to test against.")
-
-        self._best, self._best_latency = get_best_server(self.closest_servers, self._opener)
-
-        if not self._best:
+        if not best_server:
             raise SpeedtestCLIError("Failed to identify a valid best server.")
 
-        self.results.server = self._best
-        self.results.ping = self._best_latency
+        return best_server, latency
 
-        return self._best
+    def download(self, server: Server, threads: int) -> tuple[int, float]:
+        """Executes the download test. Returns (bytes_received, download_speed)."""
 
-    def download(self) -> float:
-        """Test concurrent download speed against the chosen optimal server."""
+        if not server.url:
+            raise SpeedtestCLIError("The target server is missing a valid URL.")
 
-        best_url = self.best.url
-        if not best_url:
-            raise SpeedtestCLIError("The best selected server is missing a valid URL.")
-
-        bytes_received, download_speed = run_download_test(
-            best_server_url=best_url,
+        return run_download_test(
+            best_server_url=server.url,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
-            threads=self._threads,
+            threads=threads,
         )
 
-        self.results.bytes_received = bytes_received
-        self.results.download = download_speed
+    def upload(self, server: Server, threads: int) -> tuple[int, float]:
+        """Executes the upload test. Returns (bytes_sent, upload_speed)."""
 
-        return self.results.download
+        if not server.url:
+            raise SpeedtestCLIError("The target server is missing a valid URL.")
 
-    def upload(self) -> float:
-        """Test concurrent upload speed against the chosen optimal server."""
-
-        best_url = self.best.url
-        if not best_url:
-            raise SpeedtestCLIError("The best selected server is missing a valid URL.")
-
-        bytes_sent, upload_speed = run_upload_test(
-            best_server_url=best_url,
+        return run_upload_test(
+            best_server_url=server.url,
             opener=self._opener,
             shutdown_event=self._shutdown_event,
-            threads=self._threads,
+            threads=threads,
         )
 
-        self.results.bytes_sent = bytes_sent
-        self.results.upload = upload_speed
+    def generate_share_link(self, results: TestResult) -> str:
+        """POST data to the speedtest.net API to obtain a share results link."""
 
-        return self.results.upload
+        if not results.is_complete or not results.server:
+            raise SpeedtestCLIError("Cannot generate share link: missing test results.")
+
+        # The legacy Ookla API expects speeds in kilobits per second (kbps)
+        download_kbps = round((results.download_bps or 0) / 1000.0)
+        upload_kbps = round((results.upload_bps or 0) / 1000.0)
+        ping = round(results.ping_ms or 0)
+
+        hash_str = f"{ping}-{upload_kbps}-{download_kbps}-297aae72"
+        hash_val = md5(hash_str.encode()).hexdigest()
+
+        api_parameters = {
+            "recommendedserverid": results.server.id,
+            "ping": ping,
+            "screenresolution": "",
+            "promo": "",
+            "download": download_kbps,
+            "screendpi": "",
+            "upload": upload_kbps,
+            "testmethod": "http",
+            "hash": hash_val,
+            "touchscreen": "none",
+            "startmode": "pingselect",
+            "accuracy": 1,
+            "bytesreceived": results.download_bytes or 0,
+            "bytessent": results.upload_bytes or 0,
+            "serverid": results.server.id,
+        }
+
+        api_data = urllib.parse.urlencode(api_parameters).encode()
+        headers = {"Referer": "https://c.speedtest.net/flash/speedtest.swf"}
+
+        req = urllib.request.Request(
+            "https://www.speedtest.net/api/api.php", data=api_data, headers=headers, method="POST"
+        )
+
+        try:
+            with urllib.request.urlopen(req) as response:
+                if response.status != 200:
+                    raise SpeedtestCLIError(f"Could not submit results. HTTP {response.status}")
+
+                body = response.read().decode(errors="ignore")
+
+        except urllib.error.URLError as e:
+            raise SpeedtestCLIError(f"Failed to connect to Share API: {e}") from e
+
+        qsargs = urllib.parse.parse_qs(body)
+        resultid = qsargs.get("resultid")
+
+        if not resultid or len(resultid) != 1:
+            raise SpeedtestCLIError("Could not parse result ID from API response.")
+
+        return f"https://www.speedtest.net/result/{resultid[0]}.png"
