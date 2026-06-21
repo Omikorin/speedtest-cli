@@ -11,7 +11,7 @@ runs:
         cache-dependency-glob: |
           pyproject.toml
           uv.lock
-        # quiet: true # TODO: think about this later
+        quiet: true
 
     - name: Install dependencies
       shell: bash
