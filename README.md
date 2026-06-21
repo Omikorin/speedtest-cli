@@ -3,6 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
+
 <!-- [![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE) -->
 <!-- TODO: SonarQube, GitHub Actions? -->
 
@@ -49,7 +50,9 @@ speedtest-cli --help
 ```
 
 ```text
-usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload] [-t THREADS | --single] [--share] [--bytes] [--debug] [--version]
+usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload]
+                     [-t THREADS | --single] [--share] [--bytes] [--json]
+                     [--debug] [--version]
 
 Next generation CLI for testing internet bandwidth using speedtest.net.
 
@@ -71,6 +74,7 @@ Transfer Modifiers:
 Output Options:
   --share               Generate and provide a URL to the speedtest.net share results image. (default: False)
   --bytes               Display values in bytes instead of bits. Does not affect image generation or JSON output. (default: ('bit', 1))
+  --json                Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s. (default: False)
 
 Miscellaneous Options:
   --debug               Show verbose debugging output. (default: False)
@@ -117,7 +121,6 @@ uv run build
 ```
 
 The output will be in the `dist/` directory.
-
 
 ## Acknowledgments
 
