@@ -51,7 +51,7 @@ def download_worker(
 
                 total_downloaded += len(chunk)
 
-    except (urllib.error.URLError, TimeoutError, OSError):
+    except (urllib.error.URLError, TimeoutError):
         pass
 
     return total_downloaded
@@ -127,5 +127,5 @@ def upload_worker(
 
         return payload_data.total_bytes_read
 
-    except (urllib.error.URLError, TimeoutError, OSError, SpeedtestUploadTimeout):
+    except (urllib.error.URLError, TimeoutError, SpeedtestUploadTimeout):
         return payload_data.total_bytes_read
