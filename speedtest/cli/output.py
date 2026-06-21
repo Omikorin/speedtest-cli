@@ -1,5 +1,5 @@
 """
-Handles formatting, printing, and JSON output.
+Handles formatting of test results into strings.
 """
 
 import dataclasses
@@ -10,28 +10,12 @@ from datetime import UTC, datetime
 from speedtest.models import SpeedtestConfig, TestResult
 from speedtest.utils.logger import logger
 
-__all__ = ["display_results"]
+__all__ = ["format_json", "format_text"]
 
 
-def display_results(
-    results: TestResult,
-    units: tuple[str, int],
-    share: bool = False,
-    json_output: bool = False,
-    client_config: SpeedtestConfig | None = None,
-) -> None:
-    """Orchestrate the final output rendering based on the requested format."""
+def format_json(results: TestResult, client_config: SpeedtestConfig | None = None) -> str:
+    """Construct the machine-readable JSON representation as a string."""
 
-    logger.debug(f"Results:\n{dataclasses.asdict(results)!r}")
-
-    if json_output:
-        _print_json(results, client_config)
-    else:
-        _print_text(results, units, share)
-
-
-def _print_json(results: TestResult, client_config) -> None:
-    """Construct and print the machine-readable JSON representation."""
     json_data = {
         "timestamp": datetime.now(UTC).isoformat(),
         "ping": results.ping_ms,
@@ -51,31 +35,27 @@ def _print_json(results: TestResult, client_config) -> None:
             "location": dataclasses.asdict(client_config.location),
         }
 
-    # Pretty-print for terminals, compact for file redirection/piping
     indent = 2 if sys.stdout.isatty() else None
-    print(json.dumps(json_data, indent=indent))
+    return json.dumps(json_data, indent=indent)
 
 
-def _convert_speed(speed_bps: float, unit_divisor: int) -> float:
-    """Convert speed from bits per second to the requested unit (e.g., Mega/s)."""
+def format_text(results: TestResult, units: tuple[str, int], share: bool) -> str:
+    """Format the human-readable text representation as a string."""
 
-    return (speed_bps / 1_000_000) / unit_divisor
-
-
-def _print_text(results: TestResult, units: tuple[str, int], share: bool) -> None:
-    """Format and print the human-readable text representation."""
     unit_name, unit_divisor = units
+    lines = []
 
-    if results.download_bps is not None:
-        dl_speed = _convert_speed(results.download_bps, unit_divisor)
-        print(f"Download: {dl_speed:.2f} M{unit_name}/s")
+    dl_speed = results.get_download_speed(unit_divisor)
+    if dl_speed is not None:
+        lines.append(f"Download: {dl_speed:.2f} M{unit_name}/s")
 
-    if results.upload_bps is not None:
-        ul_speed = _convert_speed(results.upload_bps, unit_divisor)
-        print(f"Upload: {ul_speed:.2f} M{unit_name}/s")
+    ul_speed = results.get_upload_speed(unit_divisor)
+    if ul_speed is not None:
+        lines.append(f"Upload: {ul_speed:.2f} M{unit_name}/s")
 
-    if share:
-        if results.share_url:
-            print(f"Share results: {results.share_url}")
-        else:
-            logger.warning("Share URL generation failed or was not executed.")
+    if results.share_url is not None:
+        lines.append(f"Share results: {results.share_url}")
+    else:
+        logger.warning("Share URL generation failed or was not executed.")
+
+    return "\n".join(lines)

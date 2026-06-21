@@ -2,12 +2,13 @@
 The main entry point of the CLI shell.
 """
 
+import dataclasses
 import signal
 import threading
 from typing import Any
 
 from speedtest.cli.commands import handle_server_list
-from speedtest.cli.output import display_results
+from speedtest.cli.output import format_json, format_text
 from speedtest.cli.parser import parse_args
 from speedtest.client import SpeedtestClient
 from speedtest.engine.config import get_config
@@ -82,13 +83,14 @@ def shell() -> int:
             logger.info("Generating share link...")
             results.share_url = client.generate_share_link(results)
 
-        display_results(
-            results=results,
-            units=ctx.units,
-            share=ctx.share,
-            json_output=ctx.json_output,
-            client_config=ctx.api_config,
-        )
+        logger.debug(f"Results:\n{dataclasses.asdict(results)!r}")
+
+        if ctx.json_output:
+            final_output = format_json(results, ctx.api_config)
+        else:
+            final_output = format_text(results, ctx.units, ctx.share)
+
+        print(final_output)
 
         return ExitStatus.SUCCESS.value
 
