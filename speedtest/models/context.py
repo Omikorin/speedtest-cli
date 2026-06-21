@@ -1,4 +1,5 @@
 import argparse
+import threading
 from dataclasses import dataclass
 
 from speedtest.models.config import SpeedtestConfig
@@ -22,14 +23,15 @@ class RunContext:
     json_output: bool
     units: tuple[str, int]  # e.g., ("bit", 1) or ("byte", 8)
 
-    # API payload
+    # Populated dynamically after initialization
     api_config: SpeedtestConfig | None = None
+
+    # The global cancellation token for graceful exits
+    shutdown_event: threading.Event | None = None
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "RunContext":
-        """
-        Consumes the raw argparse namespace and reconciles the final application state.
-        """
+        """Map raw argparse namespace into a validated domain context."""
 
         if args.single:
             threads = 1

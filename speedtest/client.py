@@ -1,4 +1,3 @@
-import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -9,15 +8,13 @@ from speedtest.engine.servers import get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
 from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
 from speedtest.models import Server, SpeedtestConfig, TestResult
+from speedtest.models.context import RunContext
 
 __all__ = ["SpeedtestClient"]
 
 
 class SpeedtestClient:
-    """Stateless network client for performing speedtest.net operations."""
-
-    def __init__(self, shutdown_event: threading.Event | None = None):
-        self._shutdown_event = shutdown_event or threading.Event()
+    """Orchestrates high-level speedtest actions."""
 
     def get_target_servers(
         self, config: SpeedtestConfig, target_id: int | None = None, limit: int = 5
@@ -46,25 +43,21 @@ class SpeedtestClient:
 
         return best_server, latency
 
-    def download(self, server: Server, threads: int) -> tuple[int, float]:
+    def download(self, server: Server, ctx: RunContext) -> tuple[int, float]:
         """Executes the download test. Returns (bytes_received, download_speed)."""
 
         if not server.url:
             raise SpeedtestCLIError("The target server is missing a valid URL.")
 
-        return run_download_test(
-            best_server_url=server.url, shutdown_event=self._shutdown_event, threads=threads
-        )
+        return run_download_test(best_server_url=server.url, ctx=ctx)
 
-    def upload(self, server: Server, threads: int) -> tuple[int, float]:
+    def upload(self, server: Server, ctx: RunContext) -> tuple[int, float]:
         """Executes the upload test. Returns (bytes_sent, upload_speed)."""
 
         if not server.url:
             raise SpeedtestCLIError("The target server is missing a valid URL.")
 
-        return run_upload_test(
-            best_server_url=server.url, shutdown_event=self._shutdown_event, threads=threads
-        )
+        return run_upload_test(best_server_url=server.url, ctx=ctx)
 
     def generate_share_link(self, results: TestResult) -> str:
         """POST data to the speedtest.net API to obtain a share results link."""

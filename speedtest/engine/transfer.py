@@ -3,23 +3,19 @@ Handles multi-threaded execution of download and upload tests.
 """
 
 import math
-import threading
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from speedtest.http.request import build_user_agent
 from speedtest.http.workers import HTTPUploaderData, download_worker, upload_worker
+from speedtest.models.context import RunContext
 from speedtest.utils.logger import logger
 
 __all__ = ["run_download_test", "run_upload_test"]
 
 
-def run_download_test(
-    best_server_url: str,
-    shutdown_event: threading.Event | None = None,
-    threads: int | None = None,
-) -> tuple[int, float]:
+def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
     """
     Execute a multi-threaded download speed test against the target server.
     Returns a tuple of (bytes_received, download_speed_bps).
@@ -49,9 +45,9 @@ def run_download_test(
     bytes_received = 0
     start_time = time.monotonic()
 
-    with ThreadPoolExecutor(max_workers=threads) as executor:
+    with ThreadPoolExecutor(max_workers=ctx.threads) as executor:
         futures = [
-            executor.submit(download_worker, req, start_time, test_length, shutdown_event)
+            executor.submit(download_worker, req, start_time, test_length, ctx.shutdown_event)
             for req in requests
         ]
 
@@ -61,7 +57,7 @@ def run_download_test(
             except Exception as e:
                 logger.debug(f"Download thread failed: {e}")
 
-            if shutdown_event and shutdown_event.is_set():
+            if ctx.shutdown_event and ctx.shutdown_event.is_set():
                 break
 
     stop_time = time.monotonic()
@@ -72,11 +68,7 @@ def run_download_test(
     return bytes_received, download_speed_bps
 
 
-def run_upload_test(
-    best_server_url: str,
-    shutdown_event: threading.Event | None = None,
-    threads: int | None = None,
-) -> tuple[int, float]:
+def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
     """
     Execute a multi-threaded upload speed test against the target server.
     Returns a tuple of (bytes_sent, upload_speed_bps).
@@ -107,7 +99,7 @@ def run_upload_test(
             length=size,
             start_time=0.0,  # Dummy value; will be stamped right before execution
             timeout=test_length,
-            shutdown_event=shutdown_event,
+            shutdown_event=ctx.shutdown_event,
         )
 
         url = f"{best_server_url}{delim}x={timestamp}.{i}"
@@ -126,14 +118,14 @@ def run_upload_test(
     bytes_sent = 0
     start_time = time.monotonic()
 
-    with ThreadPoolExecutor(max_workers=threads) as executor:
+    with ThreadPoolExecutor(max_workers=ctx.threads) as executor:
         futures = []
 
         for req, payload in zip(requests, payloads):
             # Stamp the real start time immediately before thread submission
             payload.start_time = start_time
 
-            futures.append(executor.submit(upload_worker, req, payload, shutdown_event))
+            futures.append(executor.submit(upload_worker, req, payload, ctx.shutdown_event))
 
         for future in as_completed(futures):
             try:
@@ -141,7 +133,7 @@ def run_upload_test(
             except Exception as e:
                 logger.debug(f"Upload thread failed: {e}")
 
-            if shutdown_event and shutdown_event.is_set():
+            if ctx.shutdown_event and ctx.shutdown_event.is_set():
                 break
 
     stop_time = time.monotonic()

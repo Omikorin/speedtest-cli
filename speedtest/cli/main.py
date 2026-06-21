@@ -42,9 +42,9 @@ def shell() -> int:
     results = TestResult()
 
     setup_logging(debug=ctx.debug_mode, quiet=ctx.is_quiet)
-    shutdown_event = _register_shutdown_handler()
 
-    client = SpeedtestClient(shutdown_event=shutdown_event)
+    ctx.shutdown_event = _register_shutdown_handler()
+    client = SpeedtestClient()
 
     try:
         logger.info("Retrieving speedtest.net configuration...")
@@ -71,13 +71,11 @@ def shell() -> int:
         # Transfer tests
         if not ctx.no_download:
             results.download_bytes, results.download_bps = client.download(
-                server=results.server, threads=ctx.threads
+                server=results.server, ctx=ctx
             )
 
         if not ctx.no_upload:
-            results.upload_bytes, results.upload_bps = client.upload(
-                server=results.server, threads=ctx.threads
-            )
+            results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
 
         if ctx.share:
             logger.info("Generating share link...")
