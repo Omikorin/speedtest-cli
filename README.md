@@ -3,9 +3,8 @@
 [![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
-
-<!-- [![GitHub  License](https://img.shields.io/github/license/Omikorin/speedtest-cli)](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE) -->
-<!-- TODO: SonarQube, GitHub Actions? -->
+[![CI](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Omikorin_speedtest-cli&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Omikorin_speedtest-cli)
 
 Next generation CLI for testing internet bandwidth using speedtest.net
 
