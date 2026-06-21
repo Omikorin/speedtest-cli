@@ -43,11 +43,7 @@ def shell() -> int:
     setup_logging(debug=ctx.debug_mode, quiet=ctx.is_quiet)
     shutdown_event = _register_shutdown_handler()
 
-    client = SpeedtestClient(
-        # source_address=ctx.source_ip,
-        # timeout=ctx.timeout,
-        shutdown_event=shutdown_event,
-    )
+    client = SpeedtestClient(shutdown_event=shutdown_event)
 
     try:
         logger.info("Retrieving speedtest.net configuration...")

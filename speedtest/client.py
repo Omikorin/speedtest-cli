@@ -17,13 +17,8 @@ __all__ = ["SpeedtestClient"]
 class SpeedtestClient:
     """Stateless network client for performing speedtest.net operations."""
 
-    def __init__(
-        self,
-        source_address: str | None = None,
-        timeout: float = 10.0,
-        shutdown_event: threading.Event | None = None,
-    ):
-        self._opener = build_opener(source_address, timeout)
+    def __init__(self, shutdown_event: threading.Event | None = None):
+        self._opener = build_opener()
         self._shutdown_event = shutdown_event or threading.Event()
 
     def get_target_servers(

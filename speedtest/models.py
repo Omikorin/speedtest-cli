@@ -108,10 +108,6 @@ class RunContext:
     json_output: bool
     units: tuple[str, int]  # e.g., ("bit", 1) or ("byte", 8)
 
-    # Connection options
-    # source_ip: str | None = None
-    # timeout: float = 10.0
-
     # API payload
     api_config: SpeedtestConfig | None = None
 
@@ -139,8 +135,6 @@ class RunContext:
             share=args.share,
             json_output=args.json,
             units=args.units,
-            # source_ip=getattr(args, "source", None),
-            # timeout=getattr(args, "timeout", 10.0),
         )
 
 

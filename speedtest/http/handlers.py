@@ -20,7 +20,6 @@ from urllib.request import (
 
 from speedtest.http.connections import build_connection
 from speedtest.http.request import build_user_agent
-from speedtest.utils.logger import logger
 
 __all__ = [
     "SpeedtestHTTPHandler",
@@ -35,16 +34,12 @@ class SpeedtestHTTPHandler(AbstractHTTPHandler):
     def __init__(
         self,
         debuglevel: int = 0,
-        source_address: tuple[str, int] | None = None,
-        timeout: float = 10.0,
     ):
         super().__init__(debuglevel)
-        self.source_address = source_address
-        self.timeout = timeout
 
     def http_open(self, req: Request) -> Any:
         return self.do_open(
-            build_connection(HTTPConnection, self.source_address, self.timeout),
+            build_connection(HTTPConnection),
             req,
         )
 
@@ -58,21 +53,15 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
         self,
         debuglevel: int = 0,
         context: ssl.SSLContext | None = None,
-        source_address: tuple[str, int] | None = None,
-        timeout: float = 10.0,
     ):
         super().__init__(debuglevel)
 
         self._context = context or ssl.create_default_context()
-        self.source_address = source_address
-        self.timeout = timeout
 
     def https_open(self, req: Request) -> Any:
         return self.do_open(
             build_connection(
                 HTTPSConnection,
-                self.source_address,
-                self.timeout,
                 context=self._context,
             ),
             req,
@@ -81,19 +70,13 @@ class SpeedtestHTTPSHandler(AbstractHTTPHandler):
     https_request = AbstractHTTPHandler.do_request_
 
 
-def build_opener(source_address: str | None = None, timeout: float = 10.0) -> OpenerDirector:
+def build_opener() -> OpenerDirector:
     """Build an ``OpenerDirector`` with explicit custom handlers."""
-
-    logger.debug(f"Timeout set to {timeout}")
-
-    source_address_tuple = (source_address, 0) if source_address else None
-    if source_address_tuple:
-        logger.debug(f"Binding to source address: {source_address_tuple!r}")
 
     handlers = [
         ProxyHandler(),
-        SpeedtestHTTPHandler(source_address=source_address_tuple, timeout=timeout),
-        SpeedtestHTTPSHandler(source_address=source_address_tuple, timeout=timeout),
+        SpeedtestHTTPHandler(),
+        SpeedtestHTTPSHandler(),
         HTTPDefaultErrorHandler(),
         HTTPRedirectHandler(),
         HTTPErrorProcessor(),
