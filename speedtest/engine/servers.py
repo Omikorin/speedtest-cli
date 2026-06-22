@@ -15,7 +15,7 @@ from speedtest.utils.logger import logger
 __all__ = ["find_fastest_server", "get_best_server"]
 
 
-def _ping_server(server: Server, pings: int = 3) -> tuple[Server, float]:
+def _ping_server(server: Server, pings: int = 10) -> tuple[Server, float]:
     """Ping a single server using raw TCP handshakes and return the average latency."""
 
     if not server.url:
