@@ -4,7 +4,7 @@ Global logging configuration for the CLI.
 
 import logging
 import sys
-from typing import TextIO
+from typing import ClassVar, TextIO
 
 __all__ = ["logger", "setup_logging"]
 
@@ -17,7 +17,7 @@ class CLIColoredFormatter(logging.Formatter):
     only if the target stream is a genuine interactive terminal (TTY).
     """
 
-    COLORS = {
+    COLORS: ClassVar[dict[int, str]] = {
         logging.DEBUG: "\033[1;30m",  # dark grey
         logging.ERROR: "\033[1;31m",  # bold red
         logging.WARNING: "\033[1;33m",  # yellow

@@ -8,7 +8,6 @@ import sys
 from datetime import UTC, datetime
 
 from speedtest.models import SpeedtestConfig, TestResult
-from speedtest.utils.logger import logger
 
 __all__ = ["format_json", "format_text"]
 
