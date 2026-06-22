@@ -5,6 +5,7 @@ Low-level network utilities, HTTP workers, and payload generation.
 """
 
 import platform
+import socket
 import threading
 import time
 import urllib.error
@@ -24,6 +25,7 @@ __all__ = [
     "HTTPUploaderData",
     "build_user_agent",
     "download_worker",
+    "measure_tcp_latency",
     "upload_worker",
 ]
 
@@ -43,6 +45,21 @@ def build_user_agent() -> str:
 
     logger.debug(f"User-Agent: {user_agent}")
     return user_agent
+
+
+def measure_tcp_latency(ip: str, port: int, timeout: float = 5.0) -> float:
+    """
+    Measures pure TCP connection latency to a resolved IP.
+    Returns latency in milliseconds, or 3600000.0 (1 hour penalty) on failure.
+    """
+
+    start_time = time.monotonic()
+
+    try:
+        with socket.create_connection((ip, port), timeout=timeout):
+            return (time.monotonic() - start_time) * 1000.0
+    except OSError:
+        return 3600000.0
 
 
 class HTTPUploaderData:
