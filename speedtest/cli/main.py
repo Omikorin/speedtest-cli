@@ -27,7 +27,7 @@ def _register_shutdown_handler() -> threading.Event:
 
     def _handler(signum: int, frame: Any) -> None:
         shutdown_event.set()
-        logger.warning("\nStopping speedtest-cli...")
+        logger.warning("Stopping speedtest-cli...")
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGINT, _handler)
@@ -47,10 +47,13 @@ def shell() -> int:
     client = SpeedtestClient()
 
     try:
-        logger.info("Retrieving speedtest.net configuration...")
+        logger.info("[INFO] Retrieving speedtest.net configuration...")
         ctx.api_config = get_config()
 
-        logger.info(f"Testing from {ctx.api_config.isp_name} ({ctx.api_config.ip_address})...")
+        logger.info(
+            f"ISP: {ctx.api_config.ip_address} ({ctx.api_config.isp_name}) "
+            f"[{ctx.api_config.location.latitude:.4f}, {ctx.api_config.location.longitude:.4f}]"
+        )
 
         target_servers = client.get_target_servers(
             config=ctx.api_config, target_id=ctx.target_server_id
@@ -63,10 +66,12 @@ def shell() -> int:
         results.server, results.ping_ms = client.select_best_server(target_servers)
 
         logger.info(
-            f"Hosted by {results.server.sponsor} "
-            f"({results.server.name}) "
-            f"[{results.server.distance:.2f} km]: {results.ping_ms:.4f} ms"
+            f"Test server: [{results.server.id}] {results.server.distance} km "
+            f"{results.server.name} ({results.server.country}) "
+            f"by {results.server.sponsor}"
         )
+
+        logger.info(f"Latency: {results.ping_ms:.5f} ms")
 
         # Transfer tests
         if not ctx.no_download:
@@ -78,7 +83,7 @@ def shell() -> int:
             results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
 
         if ctx.share:
-            logger.info("Generating share link...")
+            logger.info("[INFO] Generating share link...")
             results.share_url = client.generate_share_link(results)
 
         logger.debug(f"Results:\n{dataclasses.asdict(results)!r}")

@@ -74,9 +74,4 @@ def get_best_server(closest_servers: list[Server]) -> tuple[Server, float]:
 
     best_server, lowest_latency = find_fastest_server(_execute_pings())
 
-    logger.debug(
-        f"Best server selected: {best_server.sponsor} "
-        f"({best_server.name}) with TCP latency {lowest_latency:.4f} ms"
-    )
-
     return best_server, lowest_latency

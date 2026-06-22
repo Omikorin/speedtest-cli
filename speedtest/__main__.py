@@ -27,7 +27,7 @@ def main() -> int:
 
         if code not in (ExitStatus.SUCCESS.value, ExitStatus.ERROR_CTRL_C.value):
             msg = str(e) or repr(e)
-            logger.error(f"ERROR: {msg}")
+            logger.error(msg)
 
         return int(code)
 

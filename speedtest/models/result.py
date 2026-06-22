@@ -40,3 +40,19 @@ class TestResult:
         """Get the upload speed formatted to the requested unit divisor."""
 
         return self._convert_speed(self.upload_bps, unit_divisor)
+
+    def get_downloaded_megabytes(self) -> float | None:
+        """Get the total downloaded data MB."""
+
+        if self.download_bytes is None:
+            return None
+
+        return self.download_bytes / 1_000_000
+
+    def get_uploaded_megabytes(self) -> float | None:
+        """Get the total uploaded data in MB."""
+
+        if self.upload_bytes is None:
+            return None
+
+        return self.upload_bytes / 1_000_000

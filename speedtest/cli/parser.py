@@ -73,8 +73,8 @@ def parse_args() -> argparse.Namespace:
         "--bytes",
         dest="units",
         action="store_const",
-        const=("byte", 8),
-        default=("bit", 1),
+        const=("B", 8),
+        default=("b", 1),
         help=(
             "Display values in bytes instead of bits. "
             "Does not affect image generation or JSON output."

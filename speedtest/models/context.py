@@ -21,7 +21,7 @@ class RunContext:
     # Output
     share: bool
     json_output: bool
-    units: tuple[str, int]  # e.g., ("bit", 1) or ("byte", 8)
+    units: tuple[str, int]  # e.g., ("b", 1) or ("B", 8)
 
     # Populated dynamically after initialization
     api_config: SpeedtestConfig | None = None

@@ -46,12 +46,16 @@ def format_text(results: TestResult, units: tuple[str, int]) -> str:
     lines = []
 
     dl_speed = results.get_download_speed(unit_divisor)
-    if dl_speed is not None:
-        lines.append(f"Download: {dl_speed:.2f} M{unit_name}/s")
+    dl_bytes = results.get_downloaded_megabytes()
+
+    if dl_speed is not None and dl_bytes is not None:
+        lines.append(f"Download: {dl_speed:.2f} M{unit_name}/s ({dl_bytes:.2f} MB)")
 
     ul_speed = results.get_upload_speed(unit_divisor)
-    if ul_speed is not None:
-        lines.append(f"Upload: {ul_speed:.2f} M{unit_name}/s")
+    ul_bytes = results.get_uploaded_megabytes()
+
+    if ul_speed is not None and ul_bytes is not None:
+        lines.append(f"Upload: {ul_speed:.2f} M{unit_name}/s ({ul_bytes:.2f} MB)")
 
     if results.share_url is not None:
         lines.append(f"Share results: {results.share_url}")

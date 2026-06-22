@@ -13,11 +13,15 @@ logger = logging.getLogger("speedtest")
 
 class CLIColoredFormatter(logging.Formatter):
     """
-    Custom formatter that prepends 'DEBUG: ' and applies safe ANSI colors
+    Custom formatter that prepends level names and applies safe ANSI colors
     only if the target stream is a genuine interactive terminal (TTY).
     """
 
-    GREY_COLOR = "\033[1;30m"
+    COLORS = {
+        logging.DEBUG: "\033[1;30m",  # dark grey
+        logging.ERROR: "\033[1;31m",  # bold red
+        logging.WARNING: "\033[1;33m",  # yellow
+    }
     RESET_COLOR = "\033[0m"
 
     def __init__(
@@ -25,16 +29,21 @@ class CLIColoredFormatter(logging.Formatter):
     ) -> None:
         super().__init__(fmt, datefmt)
         self.stream: TextIO = stream or sys.stdout
+        self.is_tty = hasattr(self.stream, "isatty") and self.stream.isatty()
 
     def format(self, record: logging.LogRecord) -> str:
         message = record.getMessage()
 
-        if record.levelno == logging.DEBUG:
-            if hasattr(self.stream, "isatty") and self.stream.isatty():
-                return f"{self.GREY_COLOR}DEBUG: {message}{self.RESET_COLOR}"
-            return f"DEBUG: {message}"
+        if record.levelno == logging.INFO:
+            return message
 
-        return message
+        prefix = f"[{record.levelname}] "
+        color = self.COLORS.get(record.levelno, "")
+
+        if self.is_tty and color:
+            return f"{color}{prefix}{message}{self.RESET_COLOR}"
+
+        return f"{prefix}{message}"
 
 
 class MaxLevelFilter(logging.Filter):
