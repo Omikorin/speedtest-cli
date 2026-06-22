@@ -55,7 +55,5 @@ def format_text(results: TestResult, units: tuple[str, int]) -> str:
 
     if results.share_url is not None:
         lines.append(f"Share results: {results.share_url}")
-    else:
-        logger.warning("Share URL generation failed or was not executed.")
 
     return "\n".join(lines)
