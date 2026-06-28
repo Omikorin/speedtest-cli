@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 concurrency:
-  group: "ci"
+  group: 'ci'
   cancel-in-progress: false
 
 jobs:
@@ -75,4 +75,4 @@ jobs:
         uses: ./.github/composite-actions/install
 
       - name: Run typecheck
-        run: uv run pyright
+        run: uv run ty check

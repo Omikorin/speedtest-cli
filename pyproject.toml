@@ -68,18 +68,17 @@ select = [
     "UP",  # pyupgrade (automatically upgrades syntax to modern Python 3.12 standards)
     "RUF", # ruff-specific rules
 ]
+extend-select = ["ANN", "PYI"]
+preview = true
 ignore = []
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
-[tool.pyright]
-include = ["speedtest", "tests"]
-pythonVersion = "3.12"
-typeCheckingMode = "standard" # Can be bumped to "strict" once codebase is fully annotated
-useLibraryCodeForTypes = true
-reportMissingImports = true
+[tool.ty.rules]
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
 
 [tool.pytest]
 minversion = "9.0"
@@ -89,8 +88,8 @@ testpaths = ["tests"]
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.400",
     "pytest>=9.0.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.15.0",
+    "ty>=0.0.55",
 ]

@@ -1,5 +1,5 @@
-name: "Install"
-description: "Sets up uv and runs install"
+name: 'Install'
+description: 'Sets up uv and runs install'
 
 runs:
   using: composite

@@ -7,7 +7,7 @@ import threading
 import time
 import urllib.request
 from collections.abc import Iterator
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 from speedtest.engine.network import (
     HTTPUploaderData,
@@ -115,13 +115,13 @@ def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
         return 0, 0.0
 
     test_length = 10.0
-    bytes_sent = 0
+    bytes_sent: int = 0
 
     tasks = list(_generate_upload_payloads(best_server_url, test_length, ctx.shutdown_event))
     start_time = time.monotonic()
 
     with ThreadPoolExecutor(max_workers=ctx.threads) as executor:
-        futures = []
+        futures: list[Future[int]] = []
         for req, payload in tasks:
             payload.start_time = start_time
             futures.append(executor.submit(upload_worker, req, payload, ctx.shutdown_event))

@@ -5,7 +5,7 @@ The main entry point of the CLI shell.
 import dataclasses
 import signal
 import threading
-from typing import Any
+from types import FrameType
 
 from speedtest.cli.commands import handle_server_list
 from speedtest.cli.output import format_json, format_text
@@ -25,7 +25,7 @@ def _register_shutdown_handler() -> threading.Event:
 
     shutdown_event = threading.Event()
 
-    def _handler(signum: int, frame: Any) -> None:
+    def _handler(signum: int, frame: FrameType | None) -> None:
         shutdown_event.set()
         logger.warning("Stopping speedtest-cli...")
         raise KeyboardInterrupt

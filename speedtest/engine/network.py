@@ -73,7 +73,7 @@ class HTTPUploaderData:
         start_time: float,
         timeout: float,
         shutdown_event: threading.Event | None = None,
-    ):
+    ) -> None:
         self.length = length
         self.start_time = start_time
         self.timeout = timeout

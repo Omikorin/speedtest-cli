@@ -105,7 +105,7 @@ uv run ruff format --check .
 uv run ruff check .
 
 # Run typecheck
-uv run pyright
+uv run ty check
 
 # Run tests
 uv run pytest

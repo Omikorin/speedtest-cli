@@ -3,12 +3,9 @@ speedtest-cli: Next generation CLI for testing internet bandwidth using speedtes
 
 """
 
-from importlib.metadata import PackageNotFoundError, version
+from ._version import __version__
 
-try:
-    __version__ = version("speedtest-cli-ng")
-except PackageNotFoundError:
-    __version__ = "unknown"
+__all__ = ["__author__", "__date__", "__licence__", "__version__"]
 
 __date__ = "2026-06-10"
 __author__ = "Michał Korczak"

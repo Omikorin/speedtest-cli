@@ -42,7 +42,7 @@ def format_text(results: TestResult, units: tuple[str, int]) -> str:
     """Format the human-readable text representation as a string."""
 
     unit_name, unit_divisor = units
-    lines = []
+    lines: list[str] = []
 
     dl_speed = results.get_download_speed(unit_divisor)
     dl_bytes = results.get_downloaded_megabytes()

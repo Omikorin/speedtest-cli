@@ -55,8 +55,8 @@ class Server:
             lat=float(data["lat"]),
             lon=float(data["lon"]),
             distance=int(data["distance"]),
-            preferred=bool(data.get("preferred", 0)),
+            preferred=bool(data.get("preferred")),
             isp_id=int(data["isp_id"]),
-            https_functional=bool(data.get("https_functional", 0)),
-            force_ping_select=bool(data.get("force_ping_select", 0)),
+            https_functional=bool(data.get("https_functional")),
+            force_ping_select=bool(data.get("force_ping_select")),
         )
