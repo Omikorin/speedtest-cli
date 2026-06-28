@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       index:
-        description: "Python index to release to"
+        description: 'Python index to release to'
         required: true
-        default: "pypi"
+        default: 'pypi'
         type: choice
         options:
-          - "pypi"
-          - "testpypi"
+          - 'pypi'
+          - 'testpypi'
   push:
     tags:
       # Publish on any tag starting with a `v`, e.g., v1.2.3
@@ -37,8 +37,10 @@ jobs:
 
       - name: Publish
         run: |
-          if [ "${{ github.event.inputs.index }}" = "pypi" ]; then
+          INDEX="${{ inputs.index || 'pypi' }}"
+
+          if [ "$INDEX" = "pypi" ]; then
             uv publish
           else
-            uv publish --index "${{ github.event.inputs.index }}"
+            uv publish --index "$INDEX"
           fi
