@@ -4,7 +4,6 @@ Retrieves and parses the core configuration JSON from speedtest.net.
 
 import json
 from json import JSONDecodeError
-from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -13,6 +12,8 @@ from speedtest.models import SpeedtestConfig
 
 CONFIG_URL = "https://www.speedtest.net/api/js/config-sdk"
 
+__all__ = ["ConfigFetchError", "fetch_raw_config", "get_config", "parse_config"]
+
 
 class ConfigFetchError(Exception):
     """Raised when the configuration cannot be retrieved or parsed."""
@@ -20,9 +21,9 @@ class ConfigFetchError(Exception):
     pass
 
 
-def fetch_raw_config(url: str = CONFIG_URL) -> dict[str, Any]:
+def fetch_raw_config(url: str = CONFIG_URL) -> str:
     """
-    Fetches the JSON configuration from the Speedtest API.
+    Fetches the raw JSON string configuration from the Speedtest API.
     """
 
     user_agent = build_user_agent()
@@ -34,11 +35,25 @@ def fetch_raw_config(url: str = CONFIG_URL) -> dict[str, Any]:
             if response.status != 200:
                 raise ConfigFetchError(f"HTTP {response.status}: Failed to fetch config.")
 
-            body = response.read().decode("utf-8")
-            return json.loads(body)
+            return response.read().decode("utf-8")
 
-    except (URLError, JSONDecodeError) as e:
-        raise ConfigFetchError(f"Failed to retrieve or parse config: {e}") from e
+    except URLError as e:
+        raise ConfigFetchError(f"Failed to retrieve config from network: {e}") from e
+
+
+def parse_config(raw_data: str) -> SpeedtestConfig:
+    """
+    Parses the raw JSON string into strict dataclass models.
+    """
+
+    try:
+        parsed_dict = json.loads(raw_data)
+        return SpeedtestConfig.from_dict(parsed_dict)
+
+    except JSONDecodeError as e:
+        raise ConfigFetchError(f"Failed to parse config JSON: {e}") from e
+    except Exception as e:
+        raise ConfigFetchError(f"Failed to map config to domain model: {e}") from e
 
 
 def get_config() -> SpeedtestConfig:
@@ -47,4 +62,5 @@ def get_config() -> SpeedtestConfig:
     """
 
     raw_data = fetch_raw_config()
-    return SpeedtestConfig.from_dict(raw_data)
+
+    return parse_config(raw_data)
