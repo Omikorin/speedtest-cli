@@ -1,5 +1,5 @@
 """
-Handles latency ranking of speedtest.net servers.
+Handles latency ranking of speedtest.net servers using raw TCP handshakes.
 """
 
 import socket
@@ -34,10 +34,7 @@ def _ping_server(server: Server, pings: int = 10) -> tuple[Server, float]:
         logger.debug(f"DNS resolution failed for {host}")
         return server, 3600000.0
 
-    latencies: list[float] = []
-
-    for _ in range(pings):
-        latencies.append(measure_tcp_latency(ip, port))
+    latencies = [measure_tcp_latency(ip, port) for _ in range(pings)]
 
     avg_latency = sum(latencies) / len(latencies) if latencies else 3600000.0
     return server, avg_latency
