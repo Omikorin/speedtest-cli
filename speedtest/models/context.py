@@ -2,6 +2,7 @@ import argparse
 import threading
 from dataclasses import dataclass
 
+from speedtest.exceptions import SpeedtestCLIError
 from speedtest.models.config import SpeedtestConfig
 
 
@@ -28,6 +29,12 @@ class RunContext:
 
     # The global cancellation token for graceful exits
     shutdown_event: threading.Event | None = None
+
+    def __post_init__(self) -> None:
+        """Self-validating domain logic executed immediately after instantiation."""
+
+        if self.threads < 1:
+            raise SpeedtestCLIError("Invalid configuration: Thread count must be at least 1.")
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "RunContext":
