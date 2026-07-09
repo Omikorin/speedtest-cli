@@ -8,9 +8,10 @@ import platform
 import socket
 import threading
 import time
-import urllib.error
-import urllib.request
+from collections.abc import Iterator
 from functools import cache
+
+import httpx2
 
 from speedtest import __version__
 from speedtest.exceptions import SpeedtestUploadTimeout
@@ -58,13 +59,13 @@ def measure_tcp_latency(ip: str, port: int, timeout: float = 5.0) -> float:
     try:
         with socket.create_connection((ip, port), timeout=timeout):
             return (time.monotonic() - start_time) * 1000.0
-    except OSError:
+    except (TimeoutError, OSError):
         return 3600000.0
 
 
 class HTTPUploaderData:
     """
-    File-like object to stream dummy data for uploads with O(1) memory footprint.
+    Iterable object to stream dummy data for uploads with O(1) memory footprint.
     """
 
     def __init__(
@@ -110,12 +111,19 @@ class HTTPUploaderData:
         self.total_bytes_read += read_size
         return chunk
 
+    def __iter__(self) -> Iterator[bytes]:
+        """Provides native httpx2 compatibility for streaming generator payloads."""
+
+        while chunk := self.read(CHUNK_SIZE_BYTES):
+            yield chunk
+
     def __len__(self) -> int:
         return self.length
 
 
 def download_worker(
-    request: urllib.request.Request,
+    client: httpx2.Client,
+    request: httpx2.Request,
     start_time: float,
     timeout: float,
     shutdown_event: threading.Event | None = None,
@@ -124,32 +132,32 @@ def download_worker(
 
     total_downloaded = 0
     deadline = start_time + timeout
-
     remaining_time = deadline - time.monotonic()
 
     if remaining_time <= 0 or (shutdown_event and shutdown_event.is_set()):
         return 0
 
     try:
-        with urllib.request.urlopen(request, timeout=remaining_time) as response:
-            while time.monotonic() <= deadline:
-                if shutdown_event and shutdown_event.is_set():
-                    break
+        response = client.send(request, stream=True)
 
-                chunk = response.read(CHUNK_SIZE_BYTES)
-                if not chunk:
+        try:
+            for chunk in response.iter_bytes(chunk_size=CHUNK_SIZE_BYTES):
+                if time.monotonic() > deadline or (shutdown_event and shutdown_event.is_set()):
                     break
-
                 total_downloaded += len(chunk)
+        finally:
+            response.close()
 
-    except (urllib.error.URLError, TimeoutError):
+    except httpx2.RequestError:
+        # Silently absorb network drops during high-concurrency stress testing
         pass
 
     return total_downloaded
 
 
 def upload_worker(
-    request: urllib.request.Request,
+    client: httpx2.Client,
+    request: httpx2.Request,
     payload_data: HTTPUploaderData,
     shutdown_event: threading.Event | None = None,
 ) -> int:
@@ -161,10 +169,8 @@ def upload_worker(
         return 0
 
     try:
-        with urllib.request.urlopen(request, timeout=remaining_time) as response:
-            response.read(UPLOAD_RESPONSE_TRUNCATION)
-
+        client.send(request)
         return payload_data.total_bytes_read
 
-    except (urllib.error.URLError, TimeoutError, SpeedtestUploadTimeout):
+    except (httpx2.RequestError, SpeedtestUploadTimeout):
         return payload_data.total_bytes_read
