@@ -22,11 +22,15 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: System :: Networking",
     "Topic :: Terminals",
     "Topic :: Utilities",
+]
+dependencies = [
+    "httpx2>=2.5.0,<3",
+    "rich>=15.0.0,<16",
 ]
 
 [project.urls]
