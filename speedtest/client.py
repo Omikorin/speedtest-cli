@@ -6,7 +6,7 @@ from operator import attrgetter
 
 from speedtest.engine.servers import get_best_server
 from speedtest.engine.transfer import run_download_test, run_upload_test
-from speedtest.exceptions import NoMatchedServer, SpeedtestCLIError
+from speedtest.exceptions import CLIError, NoMatchedServerError
 from speedtest.models import Server, SpeedtestConfig, TestResult
 from speedtest.models.context import RunContext
 
@@ -16,9 +16,7 @@ __all__ = ["SpeedtestClient"]
 class SpeedtestClient:
     """Orchestrates high-level speedtest actions."""
 
-    def get_target_servers(
-        self, config: SpeedtestConfig, target_id: int | None = None, limit: int = 5
-    ) -> list[Server]:
+    def get_target_servers(self, config: SpeedtestConfig, target_id: int | None = None, limit: int = 5) -> list[Server]:
         """Sorts available servers by distance and filters by ID if requested."""
 
         servers = sorted(config.servers, key=attrgetter("distance"))
@@ -26,7 +24,7 @@ class SpeedtestClient:
         if target_id is not None:
             servers = [srv for srv in servers if srv.id == target_id]
             if not servers:
-                raise NoMatchedServer(f"No server matched the ID: {target_id}")
+                raise NoMatchedServerError(f"No server matched the ID: {target_id}")
 
         return servers[:limit]
 
@@ -34,12 +32,12 @@ class SpeedtestClient:
         """Pings a list of servers and returns the fastest one alongside its latency."""
 
         if not servers:
-            raise SpeedtestCLIError("No servers provided to test against.")
+            raise CLIError("No servers provided to test against.")
 
         best_server, latency = get_best_server(servers)
 
         if not best_server:
-            raise SpeedtestCLIError("Failed to identify a valid best server.")
+            raise CLIError("Failed to identify a valid best server.")
 
         return best_server, latency
 
@@ -47,7 +45,7 @@ class SpeedtestClient:
         """Executes the download test. Returns (bytes_received, download_speed)."""
 
         if not server.url:
-            raise SpeedtestCLIError("The target server is missing a valid URL.")
+            raise CLIError("The target server is missing a valid URL.")
 
         return run_download_test(best_server_url=server.url, ctx=ctx)
 
@@ -55,7 +53,7 @@ class SpeedtestClient:
         """Executes the upload test. Returns (bytes_sent, upload_speed)."""
 
         if not server.url:
-            raise SpeedtestCLIError("The target server is missing a valid URL.")
+            raise CLIError("The target server is missing a valid URL.")
 
         return run_upload_test(best_server_url=server.url, ctx=ctx)
 
@@ -63,7 +61,7 @@ class SpeedtestClient:
         """POST data to the speedtest.net API to obtain a share results link."""
 
         if not results.is_complete or not results.server:
-            raise SpeedtestCLIError("Cannot generate share link: missing test results.")
+            raise CLIError("Cannot generate share link: missing test results.")
 
         # The legacy Ookla API expects speeds in kilobits per second (kbps)
         download_kbps = round((results.download_bps or 0) / 1000.0)
@@ -101,17 +99,17 @@ class SpeedtestClient:
         try:
             with urllib.request.urlopen(req) as response:
                 if response.status != 200:
-                    raise SpeedtestCLIError(f"Could not submit results. HTTP {response.status}")
+                    raise CLIError(f"Could not submit results. HTTP {response.status}")
 
                 body = response.read().decode(errors="ignore")
 
         except urllib.error.URLError as e:
-            raise SpeedtestCLIError(f"Failed to connect to Share API: {e}") from e
+            raise CLIError(f"Failed to connect to Share API: {e}") from e
 
         qsargs = urllib.parse.parse_qs(body)
         resultid = qsargs.get("resultid")
 
         if not resultid or len(resultid) != 1:
-            raise SpeedtestCLIError("Could not parse result ID from API response.")
+            raise CLIError("Could not parse result ID from API response.")
 
         return f"https://www.speedtest.net/result/{resultid[0]}.png"

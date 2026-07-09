@@ -12,7 +12,7 @@ from speedtest.cli.output import format_json, format_text
 from speedtest.cli.parser import parse_args
 from speedtest.client import SpeedtestClient
 from speedtest.engine.config import get_config
-from speedtest.exceptions import SpeedtestCLIError
+from speedtest.exceptions import CLIError
 from speedtest.models import RunContext, TestResult
 from speedtest.utils.logger import logger, setup_logging
 from speedtest.utils.status import ExitStatus
@@ -55,9 +55,7 @@ def shell() -> int:
             f"[{ctx.api_config.location.latitude:.4f}, {ctx.api_config.location.longitude:.4f}]"
         )
 
-        target_servers = client.get_target_servers(
-            config=ctx.api_config, target_id=ctx.target_server_id
-        )
+        target_servers = client.get_target_servers(config=ctx.api_config, target_id=ctx.target_server_id)
 
         if ctx.list_servers_only:
             return handle_server_list(target_servers)
@@ -75,9 +73,7 @@ def shell() -> int:
 
         # Transfer tests
         if not ctx.no_download:
-            results.download_bytes, results.download_bps = client.download(
-                server=results.server, ctx=ctx
-            )
+            results.download_bytes, results.download_bps = client.download(server=results.server, ctx=ctx)
 
         if not ctx.no_upload:
             results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
@@ -97,7 +93,7 @@ def shell() -> int:
 
         return ExitStatus.SUCCESS.value
 
-    except SpeedtestCLIError as e:
+    except CLIError as e:
         logger.error(f"Test failed: {e}")
 
         return ExitStatus.ERROR.value

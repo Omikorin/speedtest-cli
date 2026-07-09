@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
 
 from speedtest.engine.network import measure_tcp_latency
-from speedtest.exceptions import SpeedtestBestServerFailure
+from speedtest.exceptions import BestServerFailureError
 from speedtest.models import Server
 from speedtest.utils.logger import logger
 
@@ -45,23 +45,21 @@ def find_fastest_server(results: Iterable[tuple[Server, float]]) -> tuple[Server
 
     try:
         return min(results, key=lambda x: x[1])
-    except ValueError:
-        raise SpeedtestBestServerFailure("Unable to determine best server via latency pings.")
+    except ValueError as e:
+        raise BestServerFailureError("Unable to determine best server via latency pings.") from e
 
 
 def get_best_server(closest_servers: list[Server]) -> tuple[Server, float]:
     """Concurrently ping the closest servers to determine the lowest latency."""
 
     if not closest_servers:
-        raise SpeedtestBestServerFailure("No servers provided to ping.")
+        raise BestServerFailureError("No servers provided to ping.")
 
     def _execute_pings() -> Iterable[tuple[Server, float]]:
         """Generator orchestrating concurrent TCP pings."""
 
         with ThreadPoolExecutor(max_workers=len(closest_servers)) as executor:
-            future_to_server = {
-                executor.submit(_ping_server, server): server for server in closest_servers
-            }
+            future_to_server = {executor.submit(_ping_server, server): server for server in closest_servers}
 
             for future in as_completed(future_to_server):
                 try:

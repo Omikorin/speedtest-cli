@@ -5,7 +5,7 @@ The main entry point. Invoke as `speedtest-cli` or `python -m speedtest`.
 import sys
 
 from speedtest.cli.main import shell
-from speedtest.exceptions import SpeedtestException
+from speedtest.exceptions import SpeedtestError
 from speedtest.utils.logger import logger
 from speedtest.utils.status import ExitStatus
 
@@ -22,7 +22,7 @@ def main() -> int:
         logger.error("Stopped by user")
         return ExitStatus.ERROR_CTRL_C.value
 
-    except SpeedtestException as e:
+    except SpeedtestError as e:
         code = getattr(e, "code", ExitStatus.ERROR.value)
 
         if code not in (ExitStatus.SUCCESS.value, ExitStatus.ERROR_CTRL_C.value):

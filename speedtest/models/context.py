@@ -2,7 +2,7 @@ import argparse
 import threading
 from dataclasses import dataclass
 
-from speedtest.exceptions import SpeedtestCLIError
+from speedtest.exceptions import CLIError
 from speedtest.models.config import SpeedtestConfig
 
 
@@ -34,10 +34,10 @@ class RunContext:
         """Self-validating domain logic executed immediately after instantiation."""
 
         if self.threads < 1:
-            raise SpeedtestCLIError("Invalid configuration: Thread count must be at least 1.")
+            raise CLIError("Invalid configuration: Thread count must be at least 1.")
 
     @classmethod
-    def from_args(cls, args: argparse.Namespace) -> "RunContext":
+    def from_args(cls, args: argparse.Namespace) -> RunContext:
         """Map raw argparse namespace into a validated domain context."""
 
         if args.single:

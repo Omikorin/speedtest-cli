@@ -3,27 +3,27 @@ Speedtest-related exceptions.
 """
 
 __all__ = [
-    "NoMatchedServer",
-    "SpeedtestBestServerFailure",
-    "SpeedtestCLIError",
-    "SpeedtestException",
-    "SpeedtestUploadTimeout",
+    "BestServerFailureError",
+    "CLIError",
+    "NoMatchedServerError",
+    "SpeedtestError",
+    "UploadTimeoutError",
 ]
 
 
-class SpeedtestException(Exception):
+class SpeedtestError(Exception):
     """Base exception for this module."""
 
 
-class SpeedtestCLIError(SpeedtestException):
+class CLIError(SpeedtestError):
     """Generic exception for raising errors during CLI operation."""
 
 
-class NoMatchedServer(SpeedtestException):
+class NoMatchedServerError(SpeedtestError):
     """No server matched when filtering."""
 
 
-class SpeedtestUploadTimeout(SpeedtestException):
+class UploadTimeoutError(SpeedtestError):
     """
     testlength configuration reached during upload.
 
@@ -31,5 +31,5 @@ class SpeedtestUploadTimeout(SpeedtestException):
     """
 
 
-class SpeedtestBestServerFailure(SpeedtestException):
+class BestServerFailureError(SpeedtestError):
     """Unable to determine best server."""

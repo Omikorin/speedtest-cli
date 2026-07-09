@@ -14,7 +14,7 @@ from functools import cache
 import httpx2
 
 from speedtest import __version__
-from speedtest.exceptions import SpeedtestUploadTimeout
+from speedtest.exceptions import UploadTimeoutError
 from speedtest.utils.logger import logger
 
 # --- Constants ---
@@ -38,11 +38,7 @@ def build_user_agent() -> str:
     system = platform.system() or "UnknownOS"
     machine = platform.machine() or "UnknownArch"
 
-    user_agent = (
-        f"Mozilla/5.0 ({system}; {machine}) "
-        f"Python/{platform.python_version()} "
-        f"speedtest-cli/{__version__}"
-    )
+    user_agent = f"Mozilla/5.0 ({system}; {machine}) Python/{platform.python_version()} speedtest-cli/{__version__}"
 
     logger.debug(f"User-Agent: {user_agent}")
     return user_agent
@@ -59,7 +55,7 @@ def measure_tcp_latency(ip: str, port: int, timeout: float = 5.0) -> float:
     try:
         with socket.create_connection((ip, port), timeout=timeout):
             return (time.monotonic() - start_time) * 1000.0
-    except (TimeoutError, OSError):
+    except TimeoutError, OSError:
         return 3600000.0
 
 
@@ -90,10 +86,8 @@ class HTTPUploaderData:
     def read(self, n: int = -1) -> bytes:
         """Yield dynamic chunks of dummy data until length or timeout is reached."""
 
-        if time.monotonic() > self.deadline or (
-            self._shutdown_event and self._shutdown_event.is_set()
-        ):
-            raise SpeedtestUploadTimeout()
+        if time.monotonic() > self.deadline or (self._shutdown_event and self._shutdown_event.is_set()):
+            raise UploadTimeoutError()
 
         remaining = self.length - self.total_bytes_read
         if remaining <= 0:
@@ -172,5 +166,5 @@ def upload_worker(
         client.send(request)
         return payload_data.total_bytes_read
 
-    except (httpx2.RequestError, SpeedtestUploadTimeout):
+    except httpx2.RequestError, UploadTimeoutError:
         return payload_data.total_bytes_read

@@ -75,20 +75,14 @@ def parse_args() -> argparse.Namespace:
         action="store_const",
         const=("B", 8),
         default=("b", 1),
-        help=(
-            "Display values in bytes instead of bits. "
-            "Does not affect image generation or JSON output."
-        ),
+        help=("Display values in bytes instead of bits. Does not affect image generation or JSON output."),
     )
 
     format_group = output_group.add_mutually_exclusive_group()
     format_group.add_argument(
         "--json",
         action="store_true",
-        help=(
-            "Suppress verbose output, only show basic information "
-            "in JSON format. Speeds listed in bit/s."
-        ),
+        help=("Suppress verbose output, only show basic information in JSON format. Speeds listed in bit/s."),
     )
 
     misc_group = parser.add_argument_group("Miscellaneous Options")

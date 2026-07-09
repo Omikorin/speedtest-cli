@@ -24,9 +24,7 @@ class CLIColoredFormatter(logging.Formatter):
     }
     RESET_COLOR = "\033[0m"
 
-    def __init__(
-        self, fmt: str | None = None, datefmt: str | None = None, stream: TextIO | None = None
-    ) -> None:
+    def __init__(self, fmt: str | None = None, datefmt: str | None = None, stream: TextIO | None = None) -> None:
         super().__init__(fmt, datefmt)
         self.stream: TextIO = stream or sys.stdout
         self.is_tty = hasattr(self.stream, "isatty") and self.stream.isatty()

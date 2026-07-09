@@ -96,9 +96,7 @@ def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float
         ThreadPoolExecutor(max_workers=ctx.threads) as executor,
     ):
         futures: list[Future[int]] = [
-            executor.submit(
-                download_worker, client, req, start_time, test_length, ctx.shutdown_event
-            )
+            executor.submit(download_worker, client, req, start_time, test_length, ctx.shutdown_event)
             for req in requests
         ]
 
