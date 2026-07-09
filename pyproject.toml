@@ -14,7 +14,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 description = "Next generation CLI for testing internet bandwidth using speedtest.net"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -65,7 +65,7 @@ select = [
     "W",   # pycodestyle warnings
     "F",   # pyflakes
     "I",   # isort (automatically sorts imports)
-    "UP",  # pyupgrade (automatically upgrades syntax to modern Python 3.12 standards)
+    "UP",  # pyupgrade (automatically upgrades syntax to modern Python standards)
     "RUF", # ruff-specific rules
 ]
 extend-select = ["ANN", "PYI"]
@@ -83,13 +83,13 @@ possibly-unresolved-reference = "warn"
 [tool.pytest]
 minversion = "9.0"
 # Automatically show extra test info, fail if coverage drops, and output a terminal coverage report
-addopts = "-v --cov=speedtest --cov-report=term-missing"
+addopts = ["-v", "--cov=speedtest", "--cov-report=term-missing"]
 testpaths = ["tests"]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.0",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.15.0",
-    "ty>=0.0.55",
+    "pytest>=9.0.0,<10",
+    "pytest-cov>=7.0.0,<8",
+    "ruff>=0.15.0,<1",
+    "ty>=0.0.55,<1",
 ]
