@@ -1,12 +1,3 @@
-"""
-speedtest-cli: Next generation CLI for testing internet bandwidth using speedtest.net
+from .__version__ import __description__, __title__, __version__
 
-"""
-
-from ._version import __version__
-
-__all__ = ["__author__", "__date__", "__licence__", "__version__"]
-
-__date__ = "2026-06-10"
-__author__ = "Michał Korczak"
-__licence__ = "Apache License, Version 2.0"
+__all__ = ["__description__", "__title__", "__version__"]
