@@ -4,18 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedtest-cli-ng"
-version = "0.2.0"
-authors = [
-    {name = "Michał Korczak", email = "git@omikor.in"}
-    # TODO: I'm not sure whether I should put the old author because of possible spam for him unknowingly etc
-    # {name = "Matt Martz", email = "matt@sivel.net"}
-]
-license = "Apache-2.0"
-license-files = ["LICENSE", "NOTICE"]
 description = "Next generation CLI for testing internet bandwidth using speedtest.net"
-readme = "README.md"
-requires-python = ">=3.14"
 keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
+license = "Apache-2.0"
+version = "0.2.0"
+requires-python = ">=3.14"
+authors = [{ name = "Michał Korczak", email = "git@omikor.in" }]
+license-files = ["LICENSE", "NOTICE"]
+readme = "README.md"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -32,6 +28,16 @@ classifiers = [
 dependencies = [
     "httpx2>=2.5.0,<3",
     "rich>=15.0.0,<16",
+]
+
+[dependency-groups]
+dev = [
+    # Tests
+    "pytest>=9.0.0,<10",
+    "pytest-cov>=7.0.0,<8",
+    # Linting
+    "ruff>=0.15.0,<1",
+    "ty>=0.0.55,<1",
 ]
 
 [project.urls]
@@ -95,12 +101,3 @@ minversion = "9.0"
 addopts = ["-v", "--cov=speedtest", "--cov-report=term-missing"]
 testpaths = ["tests"]
 
-[dependency-groups]
-dev = [
-    # Tests
-    "pytest>=9.0.0,<10",
-    "pytest-cov>=7.0.0,<8",
-    # Linting
-    "ruff>=0.15.0,<1",
-    "ty>=0.0.55,<1",
-]
