@@ -4,8 +4,8 @@ Retrieves and parses the core configuration JSON from speedtest.net.
 
 import json
 from json import JSONDecodeError
-from urllib.error import URLError
-from urllib.request import Request, urlopen
+
+import httpx2
 
 from speedtest.engine.network import build_user_agent
 from speedtest.models import SpeedtestConfig
@@ -24,26 +24,31 @@ class ConfigFetchError(Exception):
 def fetch_raw_config(url: str = CONFIG_URL) -> str:
     """
     Fetches the raw JSON string configuration from the Speedtest API.
+    This function is strictly I/O bound.
     """
 
-    user_agent = build_user_agent()
-
-    req = Request(url, headers={"User-Agent": user_agent, "Accept": "application/json"})
+    headers = {
+        "User-Agent": build_user_agent(),
+        "Accept": "application/json",
+    }
 
     try:
-        with urlopen(req, timeout=10.0) as response:
-            if response.status != 200:
-                raise ConfigFetchError(f"HTTP {response.status}: Failed to fetch config.")
+        response = httpx2.get(url, headers=headers, timeout=10.0)
+        response.raise_for_status()
 
-            return response.read().decode("utf-8")
+        return response.text
 
-    except URLError as e:
+    except httpx2.HTTPStatusError as e:
+        raise ConfigFetchError(f"HTTP {e.response.status_code}: Failed to fetch config.") from e
+
+    except httpx2.RequestError as e:
         raise ConfigFetchError(f"Failed to retrieve config from network: {e}") from e
 
 
 def parse_config(raw_data: str) -> SpeedtestConfig:
     """
     Parses the raw JSON string into strict dataclass models.
+    This function is strictly CPU-bound and pure.
     """
 
     try:
@@ -52,7 +57,9 @@ def parse_config(raw_data: str) -> SpeedtestConfig:
 
     except JSONDecodeError as e:
         raise ConfigFetchError(f"Failed to parse config JSON: {e}") from e
+
     except Exception as e:
+        # Catching generic exceptions from the from_dict factory if data schema changes
         raise ConfigFetchError(f"Failed to map config to domain model: {e}") from e
 
 
@@ -62,5 +69,4 @@ def get_config() -> SpeedtestConfig:
     """
 
     raw_data = fetch_raw_config()
-
     return parse_config(raw_data)
