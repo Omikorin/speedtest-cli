@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=80.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "speedtest-cli-ng"
@@ -49,12 +49,15 @@ Issues = "https://github.com/Omikorin/speedtest-cli/issues"
 speedtest = "speedtest.__main__:main"
 speedtest-cli = "speedtest.__main__:main"
 
-# Tool-specific configurations
-[tool.setuptools.packages.find]
-include = ["speedtest", "speedtest.*"]
+[tool.hatch.build.targets.sdist]
+exclude = [
+    ".github",
+    ".python-version",
+    "renovate.json5",
+]
 
-[tool.setuptools.data-files]
-"share/man/man1" = ["extras/man/speedtest-cli.1"]
+[tool.hatch.build.targets.wheel]
+packages = ["speedtest"]
 
 [tool.uv]
 required-version = ">=0.11.0"
