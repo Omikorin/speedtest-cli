@@ -6,6 +6,8 @@
 [![CI](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Omikorin_speedtest-cli&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Omikorin_speedtest-cli)
 
+---
+
 Next generation CLI for testing internet bandwidth using speedtest.net
 
 Rebuilt for modern Python 3.14+
@@ -127,7 +129,7 @@ This project is a heavily refactored and modernized fork of the original [speedt
 
 ## License
 
-This project is licensed undeer the [Apache License 2.0](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE).
+This project is licensed under the terms of the [Apache License 2.0](https://github.com/Omikorin/speedtest-cli/blob/main/LICENSE).
 
 ---
 
