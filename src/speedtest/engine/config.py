@@ -8,10 +8,9 @@ from json import JSONDecodeError
 import httpx2
 
 from speedtest.models import ApiConfig
+from speedtest.utils import CONFIG_URL
 
 from .network import build_user_agent
-
-CONFIG_URL = "https://www.speedtest.net/api/js/config-sdk"
 
 __all__ = ["ConfigFetchError", "fetch_raw_config", "get_config", "parse_config"]
 
