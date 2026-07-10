@@ -2,6 +2,6 @@
 Command-line interface module.
 """
 
-from .main import shell
+from .runner import shell
 
 __all__ = ["shell"]

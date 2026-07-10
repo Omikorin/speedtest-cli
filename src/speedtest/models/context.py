@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from speedtest.exceptions import CLIError
 
-from .config import ApiConfig
+from .api_config import ApiConfig
 
 
 @dataclass(kw_only=True)
