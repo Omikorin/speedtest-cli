@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from speedtest.exceptions import CLIError
 
-from .config import SpeedtestConfig
+from .config import ApiConfig
 
 
 @dataclass(kw_only=True)
@@ -27,7 +27,7 @@ class RunContext:
     unit_divisor: int
 
     # Populated dynamically after initialization
-    api_config: SpeedtestConfig | None = None
+    api_config: ApiConfig | None = None
 
     # The global cancellation token for graceful exits
     shutdown_event: threading.Event | None = None

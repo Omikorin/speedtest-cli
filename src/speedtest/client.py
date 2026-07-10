@@ -6,7 +6,7 @@ from operator import attrgetter
 
 from speedtest.engine import get_best_server, run_download_test, run_upload_test
 from speedtest.exceptions import CLIError, NoMatchedServerError
-from speedtest.models import RunContext, Server, SpeedtestConfig, TestResult
+from speedtest.models import ApiConfig, RunContext, Server, TestResult
 
 __all__ = ["SpeedtestClient"]
 
@@ -14,7 +14,7 @@ __all__ = ["SpeedtestClient"]
 class SpeedtestClient:
     """Orchestrates high-level speedtest actions."""
 
-    def get_target_servers(self, config: SpeedtestConfig, target_id: int | None = None, limit: int = 5) -> list[Server]:
+    def get_target_servers(self, config: ApiConfig, target_id: int | None = None, limit: int = 5) -> list[Server]:
         """Sorts available servers by distance and filters by ID if requested."""
 
         servers = sorted(config.servers, key=attrgetter("distance"))

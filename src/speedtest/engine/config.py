@@ -7,7 +7,7 @@ from json import JSONDecodeError
 
 import httpx2
 
-from speedtest.models import SpeedtestConfig
+from speedtest.models import ApiConfig
 
 from .network import build_user_agent
 
@@ -46,7 +46,7 @@ def fetch_raw_config(url: str = CONFIG_URL) -> str:
         raise ConfigFetchError(f"Failed to retrieve config from network: {e}") from e
 
 
-def parse_config(raw_data: str) -> SpeedtestConfig:
+def parse_config(raw_data: str) -> ApiConfig:
     """
     Parses the raw JSON string into strict dataclass models.
     This function is strictly CPU-bound and pure.
@@ -54,7 +54,7 @@ def parse_config(raw_data: str) -> SpeedtestConfig:
 
     try:
         parsed_dict = json.loads(raw_data)
-        return SpeedtestConfig.from_dict(parsed_dict)
+        return ApiConfig.from_dict(parsed_dict)
 
     except JSONDecodeError as e:
         raise ConfigFetchError(f"Failed to parse config JSON: {e}") from e
@@ -64,7 +64,7 @@ def parse_config(raw_data: str) -> SpeedtestConfig:
         raise ConfigFetchError(f"Failed to map config to domain model: {e}") from e
 
 
-def get_config() -> SpeedtestConfig:
+def get_config() -> ApiConfig:
     """
     Orchestrates fetching the raw data and building the strict dataclass models.
     """

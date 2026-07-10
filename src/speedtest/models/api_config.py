@@ -5,7 +5,7 @@ from .server import Location, Server
 
 
 @dataclass(kw_only=True)
-class SpeedtestConfig:
+class ApiConfig:
     ip_address: str
     isp_name: str
     isp_id: int
