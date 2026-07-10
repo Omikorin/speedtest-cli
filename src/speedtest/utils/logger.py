@@ -3,65 +3,22 @@ Global logging configuration for the CLI.
 """
 
 import logging
-import sys
-from typing import ClassVar, TextIO
 
-__all__ = ["logger", "setup_logging"]
+from rich.console import Console
+from rich.logging import RichHandler
+
+__all__ = ["console", "logger", "setup_logging"]
 
 logger = logging.getLogger("speedtest")
-
-
-class CLIColoredFormatter(logging.Formatter):
-    """
-    Custom formatter that prepends level names and applies safe ANSI colors
-    only if the target stream is a genuine interactive terminal (TTY).
-    """
-
-    COLORS: ClassVar[dict[int, str]] = {
-        logging.DEBUG: "\033[1;30m",  # dark grey
-        logging.ERROR: "\033[1;31m",  # bold red
-        logging.WARNING: "\033[1;33m",  # yellow
-    }
-    RESET_COLOR = "\033[0m"
-
-    def __init__(self, fmt: str | None = None, datefmt: str | None = None, stream: TextIO | None = None) -> None:
-        super().__init__(fmt, datefmt)
-        self.stream: TextIO = stream or sys.stdout
-        self.is_tty = hasattr(self.stream, "isatty") and self.stream.isatty()
-
-    def format(self, record: logging.LogRecord) -> str:
-        message = record.getMessage()
-
-        if record.levelno == logging.INFO:
-            return message
-
-        prefix = f"[{record.levelname}] "
-        color = self.COLORS.get(record.levelno, "")
-
-        if self.is_tty and color:
-            return f"{color}{prefix}{message}{self.RESET_COLOR}"
-
-        return f"{prefix}{message}"
-
-
-class MaxLevelFilter(logging.Filter):
-    """Filter to ensure logs above a specific severity do not spill into a handler."""
-
-    def __init__(self, max_level: int) -> None:
-        super().__init__()
-        self.max_level = max_level
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno <= self.max_level
+console = Console()
 
 
 def setup_logging(debug: bool = False, quiet: bool = False) -> None:
-    """
-    Configures the global logging pipeline infrastructure.
-    Separates stdout/stderr streams and attaches custom formatting options.
-    """
+    """Configures global logging pipeline using rich."""
 
     logger.handlers.clear()
+
+    console.quiet = quiet
 
     if debug:
         level = logging.DEBUG
@@ -72,18 +29,13 @@ def setup_logging(debug: bool = False, quiet: bool = False) -> None:
 
     logger.setLevel(level)
 
-    # Route DEBUG & INFO messages cleanly to stdout
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_formatter = CLIColoredFormatter(stream=sys.stdout)
-    stdout_handler.setFormatter(stdout_formatter)
-    stdout_handler.setLevel(logging.DEBUG)
-    stdout_handler.addFilter(MaxLevelFilter(logging.INFO))
+    handler = RichHandler(
+        console=console,
+        show_time=debug,
+        show_level=True,
+        show_path=debug,
+        rich_tracebacks=True,
+        markup=True,
+    )
 
-    # Route WARNING, ERROR & CRITICAL messages cleanly to stderr
-    stderr_handler = logging.StreamHandler(sys.stderr)
-    stderr_formatter = CLIColoredFormatter(stream=sys.stderr)
-    stderr_handler.setFormatter(stderr_formatter)
-    stderr_handler.setLevel(logging.WARNING)
-
-    logger.addHandler(stdout_handler)
-    logger.addHandler(stderr_handler)
+    logger.addHandler(handler)

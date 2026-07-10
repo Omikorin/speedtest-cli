@@ -7,14 +7,13 @@ import signal
 import threading
 from types import FrameType
 
-from speedtest.cli.commands import handle_server_list
-from speedtest.cli.output import format_json, format_text
+from speedtest.cli.display import print_json, print_server_list
 from speedtest.cli.parser import parse_args
 from speedtest.client import SpeedtestClient
 from speedtest.engine.config import get_config
 from speedtest.exceptions import CLIError
 from speedtest.models import RunContext, TestResult
-from speedtest.utils.logger import logger, setup_logging
+from speedtest.utils.logger import console, logger, setup_logging
 from speedtest.utils.status import ExitStatus
 
 __all__ = ["shell"]
@@ -47,21 +46,22 @@ def shell() -> int:
     client = SpeedtestClient()
 
     try:
-        logger.info("[INFO] Retrieving speedtest.net configuration...")
-        ctx.api_config = get_config()
+        with console.status("[bold cyan]Retrieving speedtest.net configuration..."):
+            ctx.api_config = get_config()
 
         logger.info(
-            f"ISP: {ctx.api_config.ip_address} ({ctx.api_config.isp_name}) "
-            f"[{ctx.api_config.location.latitude:.4f}, {ctx.api_config.location.longitude:.4f}]"
+            f"Client: {ctx.api_config.ip_address} (ISP: {ctx.api_config.isp_name}) "
+            f"Location: [{ctx.api_config.location.latitude:.4f}, {ctx.api_config.location.longitude:.4f}]"
         )
 
-        target_servers = client.get_target_servers(config=ctx.api_config, target_id=ctx.target_server_id)
+        with console.status("[bold cyan]Fetching server list..."):
+            target_servers = client.get_target_servers(config=ctx.api_config, target_id=ctx.target_server_id)
 
         if ctx.list_servers_only:
-            return handle_server_list(target_servers)
+            return print_server_list(target_servers)
 
-        # Latency test
-        results.server, results.ping_ms = client.select_best_server(target_servers)
+        with console.status("[bold cyan]Selecting best server..."):
+            results.server, results.ping_ms = client.select_best_server(target_servers)
 
         logger.info(
             f"Test server: [{results.server.id}] {results.server.distance} km "
@@ -71,29 +71,37 @@ def shell() -> int:
 
         logger.info(f"Latency: {results.ping_ms:.5f} ms")
 
-        # Transfer tests
         if not ctx.no_download:
-            results.download_bytes, results.download_bps = client.download(server=results.server, ctx=ctx)
+            with console.status("[bold green]Testing download speed..."):
+                results.download_bytes, results.download_bps = client.download(server=results.server, ctx=ctx)
+
+            dl_speed = results.get_download_speed(ctx.unit_divisor)
+            dl_mb = results.get_downloaded_megabytes()
+            if dl_speed is not None and dl_mb is not None:
+                logger.info(f"Download: {dl_speed:.2f} M{ctx.unit_name}/s ({dl_mb:.2f} MB)")
 
         if not ctx.no_upload:
-            results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
+            with console.status("[bold yellow]Testing upload speed..."):
+                results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
+
+            ul_speed = results.get_upload_speed(ctx.unit_divisor)
+            ul_mb = results.get_uploaded_megabytes()
+            if ul_speed is not None and ul_mb is not None:
+                logger.info(f"Upload: {ul_speed:.2f} M{ctx.unit_name}/s ({ul_mb:.2f} MB)")
 
         if ctx.share:
-            logger.info("[INFO] Generating share link...")
-            results.share_url = client.generate_share_link(results)
+            with console.status("[bold magenta]Generating share link..."):
+                results.share_url = client.generate_share_link(results)
+
+            logger.info(f"Share results: {results.share_url}")
 
         logger.debug(f"Results:\n{dataclasses.asdict(results)!r}")
 
         if ctx.json_output:
-            final_output = format_json(results, ctx.api_config)
-        else:
-            final_output = format_text(results, ctx.units)
-
-        print(final_output)
-
-        return ExitStatus.SUCCESS.value
+            print_json(results, ctx.api_config)
 
     except CLIError as e:
-        logger.error(f"Test failed: {e}")
-
+        logger.error(str(e))
         return ExitStatus.ERROR.value
+
+    return ExitStatus.SUCCESS.value

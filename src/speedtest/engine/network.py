@@ -15,7 +15,6 @@ import httpx2
 
 from speedtest import __version__
 from speedtest.exceptions import UploadTimeoutError
-from speedtest.utils.logger import logger
 
 # --- Constants ---
 CHUNK_SIZE_BYTES = 10240
@@ -38,10 +37,7 @@ def build_user_agent() -> str:
     system = platform.system() or "UnknownOS"
     machine = platform.machine() or "UnknownArch"
 
-    user_agent = f"Mozilla/5.0 ({system}; {machine}) Python/{platform.python_version()} speedtest-cli/{__version__}"
-
-    logger.debug(f"User-Agent: {user_agent}")
-    return user_agent
+    return f"Mozilla/5.0 ({system}; {machine}) Python/{platform.python_version()} speedtest-cli/{__version__}"
 
 
 def measure_tcp_latency(ip: str, port: int, timeout: float = 5.0) -> float:

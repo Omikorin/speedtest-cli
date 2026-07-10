@@ -22,7 +22,8 @@ class RunContext:
     # Output
     share: bool
     json_output: bool
-    units: tuple[str, int]  # e.g., ("b", 1) or ("B", 8)
+    unit_name: str
+    unit_divisor: int
 
     # Populated dynamically after initialization
     api_config: SpeedtestConfig | None = None
@@ -47,6 +48,8 @@ class RunContext:
         else:
             threads = 4
 
+        unit_name, unit_divisor = args.units
+
         return cls(
             list_servers_only=args.list,
             debug_mode=args.debug,
@@ -57,5 +60,6 @@ class RunContext:
             threads=threads,
             share=args.share,
             json_output=args.json,
-            units=args.units,
+            unit_name=unit_name,
+            unit_divisor=unit_divisor,
         )

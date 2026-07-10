@@ -14,9 +14,7 @@ def main() -> int:
     """Execute the CLI and return an integer exit status."""
 
     try:
-        exit_status = shell()
-
-        return int(exit_status)
+        return shell()
 
     except KeyboardInterrupt:
         logger.error("Stopped by user")
@@ -31,8 +29,8 @@ def main() -> int:
 
         return int(code)
 
-    except Exception as e:
-        logger.exception("An unexpected error occurred.", e)
+    except Exception:
+        logger.exception("An unexpected error occurred.")
         return ExitStatus.ERROR.value
 
 
