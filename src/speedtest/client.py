@@ -4,11 +4,9 @@ import urllib.request
 from hashlib import md5
 from operator import attrgetter
 
-from speedtest.engine.servers import get_best_server
-from speedtest.engine.transfer import run_download_test, run_upload_test
+from speedtest.engine import get_best_server, run_download_test, run_upload_test
 from speedtest.exceptions import CLIError, NoMatchedServerError
-from speedtest.models import Server, SpeedtestConfig, TestResult
-from speedtest.models.context import RunContext
+from speedtest.models import RunContext, Server, SpeedtestConfig, TestResult
 
 __all__ = ["SpeedtestClient"]
 

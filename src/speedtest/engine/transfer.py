@@ -10,14 +10,15 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 import httpx2
 
-from speedtest.engine.network import (
+from speedtest.models import RunContext
+from speedtest.utils import logger
+
+from .network import (
     HTTPUploaderData,
     build_user_agent,
     download_worker,
     upload_worker,
 )
-from speedtest.models.context import RunContext
-from speedtest.utils.logger import logger
 
 __all__ = ["run_download_test", "run_upload_test"]
 

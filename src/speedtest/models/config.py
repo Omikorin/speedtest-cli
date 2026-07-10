@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Self
 
-from speedtest.models.server import Location, Server
+from .server import Location, Server
 
 
 @dataclass(kw_only=True)

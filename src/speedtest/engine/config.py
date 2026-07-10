@@ -7,8 +7,9 @@ from json import JSONDecodeError
 
 import httpx2
 
-from speedtest.engine.network import build_user_agent
 from speedtest.models import SpeedtestConfig
+
+from .network import build_user_agent
 
 CONFIG_URL = "https://www.speedtest.net/api/js/config-sdk"
 

@@ -3,7 +3,8 @@ import threading
 from dataclasses import dataclass
 
 from speedtest.exceptions import CLIError
-from speedtest.models.config import SpeedtestConfig
+
+from .config import SpeedtestConfig
 
 
 @dataclass(kw_only=True)

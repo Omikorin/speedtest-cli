@@ -7,14 +7,14 @@ import signal
 import threading
 from types import FrameType
 
-from speedtest.cli.display import print_json, print_server_list
-from speedtest.cli.parser import parse_args
 from speedtest.client import SpeedtestClient
-from speedtest.engine.config import get_config
+from speedtest.engine import get_config
 from speedtest.exceptions import CLIError
 from speedtest.models import RunContext, TestResult
-from speedtest.utils.logger import console, logger, setup_logging
-from speedtest.utils.status import ExitStatus
+from speedtest.utils import ExitStatus, console, logger, setup_logging
+
+from .display import print_json, print_server_list
+from .parser import parse_args
 
 __all__ = ["shell"]
 

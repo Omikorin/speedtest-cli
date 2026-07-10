@@ -1,7 +1,11 @@
-from speedtest.models.config import SpeedtestConfig
-from speedtest.models.context import RunContext
-from speedtest.models.result import TestResult
-from speedtest.models.server import Location, Server
+"""
+Domain models and data structures for the speedtest application.
+"""
+
+from .config import SpeedtestConfig
+from .context import RunContext
+from .result import TestResult
+from .server import Location, Server
 
 __all__ = [
     "Location",

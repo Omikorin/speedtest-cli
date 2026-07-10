@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from speedtest.models.server import Server
+from .server import Server
 
 
 @dataclass(kw_only=True)
