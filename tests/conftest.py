@@ -39,15 +39,15 @@ def mock_server() -> Server:
     """Provides a standard dummy server for testing."""
 
     return Server(
+        id=1234,
+        name="New York",
+        sponsor="Acme Corp",
+        country="United States",
+        cc="US",
+        host="speedtest.example.com:8080",
         url="http://speedtest.example.com/speedtest/upload.php",
         lat=40.7128,
         lon=-74.0060,
-        name="New York",
-        country="United States",
-        cc="US",
-        sponsor="Acme Corp",
-        id=1234,
-        host="speedtest.example.com:8080",
         distance=17,
         preferred=False,
         isp_id=54321,
