@@ -9,6 +9,12 @@ from speedtest.exceptions import SpeedtestError
 from speedtest.utils import ExitStatus
 
 
+class MockSpeedtestError(SpeedtestError):
+    """Subclass of SpeedtestError declaring a code attribute to satisfy strict typing."""
+
+    code: int
+
+
 @patch("speedtest.__main__.shell")
 def test_main_success(mock_shell: MagicMock) -> None:
     """Test that a successful shell execution returns its exit status."""
@@ -52,7 +58,7 @@ def test_main_speedtest_error_default_code(mock_shell: MagicMock, mock_logger: M
 def test_main_speedtest_error_with_custom_code(mock_shell: MagicMock, mock_logger: MagicMock) -> None:
     """Test that a SpeedtestError with a specific code returns that exact code."""
 
-    error = SpeedtestError("A specific domain error.")
+    error = MockSpeedtestError("A specific domain error.")
     error.code = 99
     mock_shell.side_effect = error
 
