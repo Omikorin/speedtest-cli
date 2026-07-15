@@ -33,5 +33,5 @@ def main() -> int:
         return ExitStatus.ERROR.value
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())
