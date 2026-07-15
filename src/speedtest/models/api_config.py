@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, Self
 
-from .server import Location, Server
+from .location import Location
+from .server import Server
 
 
 @dataclass(kw_only=True)
