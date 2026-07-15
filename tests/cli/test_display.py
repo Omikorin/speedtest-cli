@@ -73,7 +73,7 @@ def test_print_json_with_client_config(
     assert "client" in data
     assert data["client"]["ip"] == "1.1.1.1"
     assert data["client"]["isp"] == "Acme Internet"
-    assert data["client"]["isp_id"] == "54321"
+    assert data["client"]["isp_id"] == 54321
 
     # dataclasses.asdict() should have unpacked the location
     assert data["client"]["location"]["latitude"] == pytest.approx(40.0)

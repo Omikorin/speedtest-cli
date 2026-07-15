@@ -14,7 +14,7 @@ def mock_api_config(mock_location: Location) -> ApiConfig:
     return ApiConfig(
         ip_address="1.1.1.1",
         isp_name="Acme Internet",
-        isp_id="54321",
+        isp_id=54321,
         location=mock_location,
         guid="dummy-guid",
         token="dummy-token",
@@ -49,11 +49,11 @@ def mock_server() -> Server:
         sponsor="Acme Corp",
         id=1234,
         host="speedtest.example.com:8080",
-        distance=15.5,
-        preferred=0,
+        distance=17,
+        preferred=False,
         isp_id=54321,
-        https_functional=1,
-        force_ping_select=0,
+        https_functional=True,
+        force_ping_select=False,
     )
 
 
