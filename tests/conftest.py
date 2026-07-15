@@ -3,8 +3,7 @@ Shared fixtures for all pytest suites.
 """
 
 import pytest
-from speedtest.models import ApiConfig, Location, RunContext, Server
-from speedtest.models import TestResult as SpeedtestResult
+from speedtest.models import ApiConfig, Location, RunContext, Server, SpeedtestResult
 
 
 @pytest.fixture

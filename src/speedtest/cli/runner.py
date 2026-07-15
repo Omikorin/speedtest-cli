@@ -10,7 +10,7 @@ from types import FrameType
 from speedtest.client import SpeedtestClient
 from speedtest.engine import get_config
 from speedtest.exceptions import CLIError
-from speedtest.models import RunContext, TestResult
+from speedtest.models import RunContext, SpeedtestResult
 from speedtest.utils import ExitStatus, console, logger, setup_logging
 
 from .display import print_json, print_server_list
@@ -38,7 +38,7 @@ def shell() -> int:
 
     raw_args = parse_args()
     ctx = RunContext.from_args(raw_args)
-    results = TestResult()
+    results = SpeedtestResult()
 
     setup_logging(debug=ctx.debug_mode, quiet=ctx.is_quiet)
 

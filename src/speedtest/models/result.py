@@ -4,7 +4,7 @@ from .server import Server
 
 
 @dataclass(kw_only=True)
-class TestResult:
+class SpeedtestResult:
     # Populated after ping phase
     server: Server | None = None
     ping_ms: float | None = None

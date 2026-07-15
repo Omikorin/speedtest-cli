@@ -5,7 +5,7 @@ Domain models and data structures for the speedtest application.
 from .api_config import ApiConfig
 from .context import RunContext
 from .location import Location
-from .result import TestResult
+from .result import SpeedtestResult
 from .server import Server
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "Location",
     "RunContext",
     "Server",
-    "TestResult",
+    "SpeedtestResult",
 ]

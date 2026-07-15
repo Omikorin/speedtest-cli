@@ -9,8 +9,7 @@ from unittest.mock import patch
 import pytest
 from pytest import CaptureFixture
 from speedtest.cli.display import print_json, print_server_list
-from speedtest.models import ApiConfig, Server
-from speedtest.models import TestResult as SpeedtestResult
+from speedtest.models import ApiConfig, Server, SpeedtestResult
 from speedtest.utils import ExitStatus
 
 

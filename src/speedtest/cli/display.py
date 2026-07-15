@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 from rich.table import Table
 
-from speedtest.models import ApiConfig, Server, TestResult
+from speedtest.models import ApiConfig, Server, SpeedtestResult
 from speedtest.utils import ExitStatus, console
 
 __all__ = ["print_json", "print_server_list"]
@@ -43,7 +43,7 @@ def print_server_list(servers: list[Server]) -> int:
     return ExitStatus.SUCCESS.value
 
 
-def print_json(results: TestResult, client_config: ApiConfig | None = None) -> None:
+def print_json(results: SpeedtestResult, client_config: ApiConfig | None = None) -> None:
     """Print the machine-readable JSON representation."""
 
     json_data = {

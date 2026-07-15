@@ -1,9 +1,9 @@
 """
-Tests for the TestResult domain model.
+Tests for the SpeedtestResult domain model.
 """
 
 import pytest
-from speedtest.models import TestResult as SpeedtestResult
+from speedtest.models import SpeedtestResult
 
 
 def test_is_complete_property() -> None:

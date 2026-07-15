@@ -6,7 +6,7 @@ from operator import attrgetter
 
 from speedtest.engine import get_best_server, run_download_test, run_upload_test
 from speedtest.exceptions import CLIError, NoMatchedServerError
-from speedtest.models import ApiConfig, RunContext, Server, TestResult
+from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
 
 __all__ = ["SpeedtestClient"]
 
@@ -55,7 +55,7 @@ class SpeedtestClient:
 
         return run_upload_test(best_server_url=server.url, ctx=ctx)
 
-    def generate_share_link(self, results: TestResult) -> str:
+    def generate_share_link(self, results: SpeedtestResult) -> str:
         """POST data to the speedtest.net API to obtain a share results link."""
 
         if not results.is_complete or not results.server:
