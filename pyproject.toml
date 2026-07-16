@@ -48,6 +48,7 @@ Issues = "https://github.com/Omikorin/speedtest-cli/issues"
 [project.scripts]
 speedtest = "speedtest.__main__:main"
 speedtest-cli = "speedtest.__main__:main"
+speedtest-cli-ng = "speedtest.__main__:main"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
