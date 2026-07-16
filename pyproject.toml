@@ -7,7 +7,7 @@ name = "speedtest-cli-ng"
 description = "Next generation CLI for testing internet bandwidth using speedtest.net"
 keywords = ["speedtest", "speedtest.net", "bandwidth", "internet", "cli"]
 license = "Apache-2.0"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.14"
 authors = [{ name = "Michał Korczak", email = "git@omikor.in" }]
 license-files = ["LICENSE", "NOTICE"]
