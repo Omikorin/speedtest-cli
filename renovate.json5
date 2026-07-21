@@ -2,13 +2,21 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "docker:pinDigests",
-    "helpers:pinGitHubActionDigestsToSemver",
-    ":configMigration",
     "abandonments:recommended",
     "group:allNonMajor",
-    ":maintainLockFilesWeekly",
-    "schedule:weekly"
+
+    // default presets
+    ":configMigration",
+    // ":enablePreCommit", // waiting for prek support
+    ":enableVulnerabilityAlerts",
+
+    // digests
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigestsToSemver",
+
+    // schedule
+    "schedule:weekly",
+    ":maintainLockFilesWeekly"
   ],
   "rangeStrategy": "update-lockfile",
   "minimumReleaseAge": "7 days",
@@ -22,26 +30,7 @@
     "prEditedNotification"
   ],
   "packageRules": [
-    {
-      "matchPackageNames": [
-        "python"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "major"
-      ],
-      "enabled": false
-    },
-    {
-      "matchDepTypes": [
-        "pyenv"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "major"
-      ],
-      "enabled": false
-    },
+    // keeps the .python-version unchanged
     {
       "matchManagers": [
         "pyenv"
@@ -51,6 +40,15 @@
         "major"
       ],
       "enabled": false
+    },
+
+    // pre-commit prek tool
+    {
+      "groupName": "prek dependencies",
+      "matchManagers": [
+        "pre-commit" // waiting for prek support
+      ],
+      "description": "Weekly update of prek dependencies"
     }
   ]
 }

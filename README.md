@@ -6,8 +6,6 @@
 [![CI](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Omikorin_speedtest-cli&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Omikorin_speedtest-cli)
 
----
-
 Next generation CLI for testing internet bandwidth using speedtest.net
 
 Rebuilt for modern Python 3.14+
@@ -88,11 +86,21 @@ Miscellaneous Options:
 
 - Python 3.14+
 - uv 0.11+
+- prek 0.4+
 
-### Setup project
+### Setup pre-commit hooks
 
-This will install project's dependencies. Keep in mind that there are no runtime dependencies in production.
+You can install hooks to automatically run the validation checks:
 
+```shell
+uv tool install prek
+prek install
+```
+
+### Install dependencies
+
+:
+This will install project's dependencies
 ```bash
 uv sync
 ```
@@ -100,6 +108,12 @@ uv sync
 ### Basic workflow
 
 ```bash
+# Run pre-commit checks for changed files
+prek
+
+# Run all pre-commit checks
+prek --all-files
+
 # Run format
 uv run ruff format --check .
 

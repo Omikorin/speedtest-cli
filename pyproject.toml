@@ -104,4 +104,3 @@ minversion = "9.0"
 # Automatically show extra test info, fail if coverage drops, and output a terminal coverage report
 addopts = ["-v", "--cov=speedtest", "--cov-report=term-missing"]
 testpaths = ["tests"]
-
