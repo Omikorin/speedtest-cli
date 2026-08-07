@@ -30,16 +30,6 @@ dependencies = [
     "rich>=15.0.0,<16",
 ]
 
-[dependency-groups]
-dev = [
-    # Tests
-    "pytest>=9.0.0,<10",
-    "pytest-cov>=7.0.0,<8",
-    # Linting
-    "ruff>=0.16.0,<1",
-    "ty>=0.0.55,<1",
-]
-
 [project.urls]
 Homepage = "https://github.com/Omikorin/speedtest-cli"
 Source = "https://github.com/Omikorin/speedtest-cli"
@@ -49,6 +39,16 @@ Issues = "https://github.com/Omikorin/speedtest-cli/issues"
 speedtest = "speedtest.__main__:main"
 speedtest-cli = "speedtest.__main__:main"
 speedtest-cli-ng = "speedtest.__main__:main"
+
+[dependency-groups]
+dev = [
+    # Tests
+    "pytest>=9.0.0,<10",
+    "pytest-cov>=7.0.0,<8",
+    # Linting
+    "ruff>=0.16.0,<1",
+    "ty>=0.0.55,<1",
+]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
