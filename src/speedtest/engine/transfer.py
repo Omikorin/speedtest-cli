@@ -104,7 +104,7 @@ def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float
         for future in as_completed(futures):
             try:
                 bytes_received += future.result()
-            except Exception as e:
+            except (OSError, httpx2.HTTPError) as e:
                 logger.debug(f"Download thread failed: {e}")
 
             if ctx.shutdown_event and ctx.shutdown_event.is_set():
@@ -143,7 +143,7 @@ def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
         for future in as_completed(futures):
             try:
                 bytes_sent += future.result()
-            except Exception as e:
+            except (OSError, httpx2.HTTPError) as e:
                 logger.debug(f"Upload thread failed: {e}")
 
             if ctx.shutdown_event and ctx.shutdown_event.is_set():

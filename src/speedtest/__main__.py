@@ -28,7 +28,7 @@ def main() -> int:
 
         return int(code)
 
-    except Exception:
+    except OSError, RuntimeError, ValueError:
         logger.exception("An unexpected error occurred.")
         return ExitStatus.ERROR.value
 

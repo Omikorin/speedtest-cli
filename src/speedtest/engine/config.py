@@ -18,8 +18,6 @@ __all__ = ["ConfigFetchError", "fetch_raw_config", "get_config", "parse_config"]
 class ConfigFetchError(Exception):
     """Raised when the configuration cannot be retrieved or parsed."""
 
-    pass
-
 
 def fetch_raw_config(url: str = CONFIG_URL) -> str:
     """

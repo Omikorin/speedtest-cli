@@ -67,9 +67,8 @@ def test_parser_thread_options() -> None:
         assert args.threads is None
 
     # Test mutual exclusivity of threads and single
-    with patch.object(sys, "argv", ["speedtest-cli", "--threads", "4", "--single"]):
-        with pytest.raises(SystemExit):
-            parse_args()
+    with patch.object(sys, "argv", ["speedtest-cli", "--threads", "4", "--single"]), pytest.raises(SystemExit):
+        parse_args()
 
 
 def test_parser_output_options() -> None:

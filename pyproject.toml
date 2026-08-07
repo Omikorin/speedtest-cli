@@ -75,7 +75,7 @@ line-length = 120
 src = ["speedtest", "tests"]
 
 [tool.ruff.lint]
-select = [
+extend-select = [
     "ANN", # flake8 annotations
     "B",   # flake8 bugbear
     "PYI", # flake8 pyi

@@ -65,7 +65,7 @@ def get_best_server(closest_servers: list[Server]) -> tuple[Server, float]:
             for future in as_completed(future_to_server):
                 try:
                     yield future.result()
-                except Exception as e:
+                except OSError as e:
                     logger.debug(f"Server TCP ping generated an exception: {e}")
 
     best_server, lowest_latency = find_fastest_server(_execute_pings())
