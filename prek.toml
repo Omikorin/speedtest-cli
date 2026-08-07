@@ -1,3 +1,11 @@
+minimum_prek_version = "0.4.12"
+
+[update]
+cooldown_days = 7
+freeze = true
+include_tags = "v*"
+exclude_tags = ["*-{alpha,beta,rc}*"]
+
 [[repos]]
 repo = "builtin"
 hooks = [
