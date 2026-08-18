@@ -1,0 +1,35 @@
+name: Mirror
+
+on: [push, delete, workflow_dispatch]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target_host: ${{ fromJSON(vars.TARGET_HOSTS) }}
+
+    name: Mirror to ${{ matrix.target_host }}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          # lfs: true
+
+      - name: Mirror
+        uses: Omikorin/git-mirror@5f352523be31b1505dc13cf93257d7e8bcaf1551 # v1.0.0
+        with:
+          target_repo: 'git@${{ matrix.target_host }}:${{ github.repository }}.git'
+          ssh_private_key: ${{ secrets.MIRROR_SSH_KEY }}
+          ssh_known_hosts: ${{ vars.SSH_KNOWN_HOSTS }}
+          disable_force_push: 'true'
