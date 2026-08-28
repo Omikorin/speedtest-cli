@@ -85,8 +85,8 @@ Miscellaneous Options:
 ### Requirements
 
 - Python 3.14+
-- uv 0.11+
-- prek 0.4+
+- uv 0.12+
+- prek 0.5+
 
 ### Setup pre-commit hooks
 
@@ -99,8 +99,8 @@ prek install
 
 ### Install dependencies
 
-:
 This will install project's dependencies
+
 ```bash
 uv sync
 ```
