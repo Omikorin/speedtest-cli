@@ -8,8 +8,6 @@
 
 Next generation CLI for testing internet bandwidth using speedtest.net
 
-Rebuilt for modern Python 3.14+
-
 ## Getting started
 
 ### Installation
@@ -85,7 +83,7 @@ Miscellaneous Options:
 ### Requirements
 
 - Python 3.14+
-- uv 0.12+
+- uv 0.13+
 - prek 0.5+
 
 ### Setup pre-commit hooks
