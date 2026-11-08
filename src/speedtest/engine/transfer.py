@@ -68,11 +68,22 @@ def _generate_upload_payloads(
         headers = {
             "User-Agent": user_agent,
             "Content-Length": str(size),
+            "Content-Type": "application/x-www-form-urlencoded",
             "Cache-Control": "no-cache",
         }
 
         req = httpx2.Request("POST", url, headers=headers, content=data)
         yield req, data
+
+
+def _resolve_upload_url(url: str) -> str:
+    """Follow redirects with an empty POST; streamed bodies can't be replayed after a 307."""
+
+    try:
+        with httpx2.Client(timeout=5.0, follow_redirects=True, verify=False) as client:
+            return str(client.post(url, content=b"").url)
+    except httpx2.HTTPError:
+        return url
 
 
 def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
@@ -123,6 +134,7 @@ def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
     test_length = 10.0
     bytes_sent = 0
 
+    best_server_url = _resolve_upload_url(best_server_url)
     tasks = list(_generate_upload_payloads(best_server_url, test_length, ctx.shutdown_event))
     start_time = time.monotonic()
 

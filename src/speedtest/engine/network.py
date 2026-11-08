@@ -15,11 +15,13 @@ import httpx2
 
 from speedtest import __version__
 from speedtest.exceptions import UploadTimeoutError
+from speedtest.utils import logger
 
 # --- Constants ---
-CHUNK_SIZE_BYTES = 10240
 UPLOAD_RESPONSE_TRUNCATION = 11
-DUMMY_CHUNK = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 300
+DUMMY_CHUNK = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 1820  # ~64 KiB
+CHUNK_SIZE_BYTES = len(DUMMY_CHUNK)
+UPLOAD_BODY_PREFIX = b"content1="  # upload.php expects a form-encoded body
 
 __all__ = [
     "HTTPUploaderData",
@@ -89,7 +91,7 @@ class HTTPUploaderData:
         if remaining <= 0:
             return b""
 
-        max_alloc = len(DUMMY_CHUNK)
+        max_alloc = CHUNK_SIZE_BYTES
 
         if n < 0 or n > remaining:
             read_size = min(remaining, max_alloc)
@@ -97,6 +99,8 @@ class HTTPUploaderData:
             read_size = min(n, remaining, max_alloc)
 
         chunk = DUMMY_CHUNK[:read_size]
+        if self.total_bytes_read == 0 and read_size > len(UPLOAD_BODY_PREFIX):
+            chunk = UPLOAD_BODY_PREFIX + chunk[len(UPLOAD_BODY_PREFIX) :]
 
         self.total_bytes_read += read_size
         return chunk
@@ -159,8 +163,10 @@ def upload_worker(
         return 0
 
     try:
-        client.send(request)
+        response = client.send(request)
+        logger.debug(f"Upload {payload_data.length} B -> HTTP {response.status_code}")
         return payload_data.total_bytes_read
 
-    except httpx2.RequestError, UploadTimeoutError:
+    except (httpx2.RequestError, UploadTimeoutError) as e:
+        logger.debug(f"Upload ended early at {payload_data.total_bytes_read}/{payload_data.length} B: {e!r}")
         return payload_data.total_bytes_read
