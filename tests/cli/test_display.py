@@ -24,7 +24,10 @@ def test_print_server_list_success(mock_server: Server) -> None:
 
         table_arg = mock_print.call_args[0][0]
         assert table_arg.title == "Available Target Servers"
-        assert len(table_arg.columns) == 5
+        assert [c.header for c in table_arg.columns] == ["ID", "Distance", "Name", "Country", "Sponsor"]
+
+        row = [next(iter(c.cells)) for c in table_arg.columns]
+        assert row == ["1234", "17 km", "New York", "United States", "Acme Corp"]
 
 
 def test_print_server_list_broken_pipe(mock_server: Server) -> None:
@@ -91,3 +94,16 @@ def test_print_json_tty_indenting(capsys: CaptureFixture[str]) -> None:
     captured = capsys.readouterr()
 
     assert '{\n  "timestamp":' in captured.out
+    assert json.loads(captured.out)["ping"] == pytest.approx(10.0)
+    assert json.loads(captured.out)["server"] is None
+
+
+def test_print_json_compact_when_piped(capsys: CaptureFixture[str], mock_result: SpeedtestResult) -> None:
+    """Piped output must be a single line so other tools can read it."""
+
+    with patch.object(sys.stdout, "isatty", return_value=False):
+        print_json(mock_result)
+
+    out = capsys.readouterr().out
+    assert out.count("\n") == 1
+    assert json.loads(out)["bytes_sent"] == 6_250_000

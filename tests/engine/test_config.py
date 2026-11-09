@@ -2,7 +2,9 @@
 Tests for the configuration fetching and parsing engine.
 """
 
+import json
 import re
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import httpx2
@@ -13,6 +15,15 @@ from speedtest.engine.config import (
     get_config,
     parse_config,
 )
+from speedtest.exceptions import SpeedtestError
+from speedtest.models import ApiConfig
+from speedtest.utils import CONFIG_URL
+
+
+def test_config_fetch_error_is_a_speedtest_error() -> None:
+    """main() only turns SpeedtestError into an exit code; anything else is a traceback."""
+
+    assert issubclass(ConfigFetchError, SpeedtestError)
 
 
 @patch("speedtest.engine.config.httpx2.get")
@@ -64,18 +75,16 @@ def test_fetch_raw_config_request_error(mock_get: MagicMock) -> None:
         fetch_raw_config()
 
 
-@patch("speedtest.engine.config.ApiConfig.from_dict")
-def test_parse_config_success(mock_from_dict: MagicMock) -> None:
-    """Test that valid JSON strings are parsed and mapped to domain models."""
+def test_parse_config_success(raw_api_config: dict[str, Any]) -> None:
+    """Test that a realistic payload is parsed into real domain models."""
 
-    mock_from_dict.return_value = "MockApiConfigObject"
+    config = parse_config(json.dumps(raw_api_config))
 
-    valid_json_str = '{"ipAddress": "127.0.0.1"}'
-
-    result = parse_config(valid_json_str)
-
-    assert result == "MockApiConfigObject"
-    mock_from_dict.assert_called_once_with({"ipAddress": "127.0.0.1"})
+    assert isinstance(config, ApiConfig)
+    assert config.ip_address == "4.210.177.131"
+    assert config.token == "dummy-token"
+    assert config.location.city_name == "Amsterdam"
+    assert [s.id for s in config.servers] == [52365, 28922]
 
 
 def test_parse_config_json_decode_error() -> None:
@@ -87,28 +96,38 @@ def test_parse_config_json_decode_error() -> None:
         parse_config(invalid_json_str)
 
 
-@patch("speedtest.engine.config.ApiConfig.from_dict")
-def test_parse_config_mapping_error(mock_from_dict: MagicMock) -> None:
-    """Test that domain mapping errors raise a ConfigFetchError."""
-
-    mock_from_dict.side_effect = KeyError("ipAddress")
-
-    valid_json_str = '{"missing_keys": "true"}'
+def test_parse_config_mapping_error() -> None:
+    """Test that valid JSON with the wrong shape raises a ConfigFetchError."""
 
     with pytest.raises(ConfigFetchError, match="Failed to map config to domain model"):
-        parse_config(valid_json_str)
+        parse_config('{"missing_keys": "true"}')
 
 
-@patch("speedtest.engine.config.parse_config")
-@patch("speedtest.engine.config.fetch_raw_config")
-def test_get_config_orchestration(mock_fetch: MagicMock, mock_parse: MagicMock) -> None:
-    """Test that get_config chains fetching and parsing correctly."""
+def test_parse_config_missing_auth_token(raw_api_config: dict[str, Any]) -> None:
+    raw_api_config["clientAuth"] = {}
 
-    mock_fetch.return_value = '{"raw": "data"}'
-    mock_parse.return_value = "FinalApiConfigObject"
+    with pytest.raises(ConfigFetchError, match="Failed to map config to domain model"):
+        parse_config(json.dumps(raw_api_config))
 
-    result = get_config()
 
-    assert result == "FinalApiConfigObject"
-    mock_fetch.assert_called_once_with()
-    mock_parse.assert_called_once_with('{"raw": "data"}')
+@patch("speedtest.engine.config.httpx2.get")
+def test_get_config_fetches_and_parses(mock_get: MagicMock, raw_api_config: dict[str, Any]) -> None:
+    """Test the whole path: HTTP response body in, domain model out."""
+
+    mock_get.return_value = httpx2.Response(200, json=raw_api_config, request=httpx2.Request("GET", CONFIG_URL))
+
+    config = get_config()
+
+    assert mock_get.call_args.args[0] == CONFIG_URL
+    assert config.guid == "dummy-guid"
+    assert len(config.servers) == 2
+
+
+@patch("speedtest.engine.config.httpx2.get")
+def test_get_config_blocked_by_cdn_raises_config_error(mock_get: MagicMock) -> None:
+    """Cloudflare answers 403 to unknown clients; that must surface as ConfigFetchError."""
+
+    mock_get.return_value = httpx2.Response(403, text="403 Forbidden", request=httpx2.Request("GET", CONFIG_URL))
+
+    with pytest.raises(ConfigFetchError, match="HTTP 403"):
+        get_config()

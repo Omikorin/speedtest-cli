@@ -3,86 +3,77 @@ Tests for the global logging configuration.
 """
 
 import logging
-from unittest.mock import MagicMock, patch
+from io import StringIO
 
-from speedtest.utils.logger import console, logger, setup_logging
+import pytest
+from speedtest.utils import console, logger, setup_logging
 
 
-@patch("speedtest.utils.logger.RichHandler")
-def test_setup_logging_default(mock_rich_handler: MagicMock) -> None:
-    """Test the standard logging configuration."""
+@pytest.fixture
+def output(monkeypatch: pytest.MonkeyPatch) -> StringIO:
+    """Capture what the console would actually print."""
 
+    buffer = StringIO()
+    monkeypatch.setattr(console, "file", buffer)
+    return buffer
+
+
+def test_setup_logging_default_shows_info_and_errors(output: StringIO) -> None:
     setup_logging()
 
-    assert console.quiet is False
+    logger.debug("debug-line")
+    logger.info("info-line")
+    logger.error("error-line")
+
+    text = output.getvalue()
+    assert "debug-line" not in text
+    assert "info-line" in text
+    assert "error-line" in text
     assert logger.level == logging.INFO
 
-    mock_rich_handler.assert_called_once_with(
-        console=console,
-        show_time=False,
-        show_level=True,
-        show_path=False,
-        rich_tracebacks=True,
-        markup=True,
-    )
 
-
-@patch("speedtest.utils.logger.RichHandler")
-def test_setup_logging_debug(mock_rich_handler: MagicMock) -> None:
-    """Test that debug mode lowers the log level and adds rich trace details."""
-
+def test_setup_logging_debug_shows_debug_lines(output: StringIO) -> None:
     setup_logging(debug=True)
 
-    assert console.quiet is False
+    logger.debug("debug-line")
+
+    assert "debug-line" in output.getvalue()
     assert logger.level == logging.DEBUG
 
-    # Debug mode should explicitly enable time and path rendering
-    mock_rich_handler.assert_called_once_with(
-        console=console,
-        show_time=True,
-        show_level=True,
-        show_path=True,
-        rich_tracebacks=True,
-        markup=True,
-    )
+
+def test_setup_logging_quiet_hides_info(output: StringIO) -> None:
+    setup_logging(quiet=True)
+
+    logger.info("info-line")
+
+    assert output.getvalue() == ""
+    assert logger.level == logging.WARNING
 
 
-@patch("speedtest.utils.logger.RichHandler")
-def test_setup_logging_quiet(mock_rich_handler: MagicMock) -> None:
-    """Test that quiet mode silences the console and raises the log level to WARNING."""
+def test_quiet_mode_still_reports_errors(output: StringIO, capsys: pytest.CaptureFixture[str]) -> None:
+    """With --json, stdout is reserved for JSON, but failures must still reach the user on stderr."""
 
     setup_logging(quiet=True)
 
-    assert console.quiet is True
-    assert logger.level == logging.WARNING
+    logger.error("error-line")
 
-    mock_rich_handler.assert_called_once_with(
-        console=console,
-        show_time=False,
-        show_level=True,
-        show_path=False,
-        rich_tracebacks=True,
-        markup=True,
-    )
+    assert output.getvalue() == ""  # nothing may leak into stdout
+    assert "error-line" in capsys.readouterr().err
 
 
-@patch("speedtest.utils.logger.RichHandler")
-def test_setup_logging_debug_and_quiet(mock_rich_handler: MagicMock) -> None:
-    """Test the priority when both debug and quiet modes are requested."""
+def test_setup_logging_debug_and_quiet_keeps_stdout_clean(output: StringIO) -> None:
+    """--debug --json: debug lines are produced, but stdout stays clean for the JSON document."""
 
     setup_logging(debug=True, quiet=True)
 
-    # The console should be muted due to quiet=True
-    assert console.quiet is True
+    logger.debug("debug-line")
 
-    # However, because debug check comes first in the if/elif chain, the log level should be DEBUG
     assert logger.level == logging.DEBUG
+    assert output.getvalue() == ""
 
-    mock_rich_handler.assert_called_once_with(
-        console=console,
-        show_time=True,
-        show_level=True,
-        show_path=True,
-        rich_tracebacks=True,
-        markup=True,
-    )
+
+def test_setup_logging_is_idempotent() -> None:
+    setup_logging()
+    setup_logging(debug=True)
+
+    assert len(logger.handlers) == 1

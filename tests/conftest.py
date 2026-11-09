@@ -2,8 +2,67 @@
 Shared fixtures for all pytest suites.
 """
 
+import logging
+from collections.abc import Iterator
+from typing import Any
+
 import pytest
 from speedtest.models import ApiConfig, Location, RunContext, Server, SpeedtestResult
+from speedtest.utils import console, logger
+
+
+@pytest.fixture(autouse=True)
+def _reset_logging() -> Iterator[None]:
+    """setup_logging mutates global state; undo it so tests stay independent."""
+
+    yield
+    logger.handlers.clear()
+    logger.setLevel(logging.NOTSET)
+    console.quiet = False
+
+
+@pytest.fixture
+def raw_api_config() -> dict[str, Any]:
+    """A config-sdk payload shaped like the real API response."""
+
+    def server(server_id: str, sponsor: str, host: str, distance: int) -> dict[str, Any]:
+        return {
+            "id": server_id,
+            "name": "Amsterdam",
+            "sponsor": sponsor,
+            "country": "Netherlands",
+            "cc": "NL",
+            "host": host,
+            "url": f"http://{host}/speedtest/upload.php",
+            "lat": "52.3702",
+            "lon": "4.8952",
+            "distance": distance,
+            "preferred": 0,
+            "isp_id": "12345",
+            "https_functional": 1,
+            "force_ping_select": 0,
+        }
+
+    return {
+        "ipAddress": "4.210.177.131",
+        "ispName": "Microsoft Azure",
+        "ispId": 12345,
+        "guid": "dummy-guid",
+        "clientAuth": {"token": "dummy-token"},
+        "location": {
+            "latitude": 52.3716,
+            "longitude": 4.8883,
+            "cityName": "Amsterdam",
+            "countryCode": "NL",
+            "countryName": "Netherlands",
+            "regionCode": "NH",
+            "regionName": "North Holland",
+        },
+        "servers": [
+            server("52365", "Odido", "speedtest.odido.example:8080", 1),
+            server("28922", "PhoenixNAP Global IT Services", "speedtest.phoenixnap.example:8080", 0),
+        ],
+    }
 
 
 @pytest.fixture

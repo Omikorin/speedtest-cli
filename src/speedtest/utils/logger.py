@@ -11,6 +11,7 @@ __all__ = ["console", "logger", "setup_logging"]
 
 logger = logging.getLogger("speedtest")
 console = Console()
+error_console = Console(stderr=True)
 
 
 def setup_logging(debug: bool = False, quiet: bool = False) -> None:
@@ -29,8 +30,9 @@ def setup_logging(debug: bool = False, quiet: bool = False) -> None:
 
     logger.setLevel(level)
 
+    # Quiet mode reserves stdout for JSON, so log records move to stderr instead of vanishing.
     handler = RichHandler(
-        console=console,
+        console=error_console if quiet else console,
         show_time=debug,
         show_level=True,
         show_path=debug,

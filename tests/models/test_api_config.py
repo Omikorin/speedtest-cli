@@ -2,65 +2,57 @@
 Tests for the ApiConfig domain model.
 """
 
-from unittest.mock import MagicMock, patch
+from typing import Any
 
+import pytest
 from speedtest.models import ApiConfig, Location, Server
 
 
-@patch.object(Location, "from_dict")
-@patch.object(Server, "from_dict")
-def test_api_config_from_dict(mock_server_from_dict: MagicMock, mock_location_from_dict: MagicMock) -> None:
-    """Test that ApiConfig correctly parses top-level fields and delegates nested ones."""
+def test_api_config_from_dict(raw_api_config: dict[str, Any]) -> None:
+    """Test that ApiConfig parses top-level fields and builds real nested models."""
 
-    mock_location_from_dict.return_value = "MockLocationObject"
-    mock_server_from_dict.side_effect = ["MockServer1", "MockServer2"]
+    config = ApiConfig.from_dict(raw_api_config)
 
-    raw_api_data = {
-        "ipAddress": "1.1.1.1",
-        "ispName": "Acme Internet",
-        "ispId": "54321",
-        "guid": "dummy-guid",
-        "clientAuth": {"token": "dummy-token"},
-        "location": {"mock": "location_data"},
-        "servers": [{"mock": "server_1"}, {"mock": "server_2"}],
-    }
-
-    config = ApiConfig.from_dict(raw_api_data)
-
-    assert config.ip_address == "1.1.1.1"
-    assert config.isp_name == "Acme Internet"
-    assert config.isp_id == 54321
+    assert config.ip_address == "4.210.177.131"
+    assert config.isp_name == "Microsoft Azure"
+    assert config.isp_id == 12345
     assert config.guid == "dummy-guid"
     assert config.token == "dummy-token"
 
-    assert config.location == "MockLocationObject"
-    mock_location_from_dict.assert_called_once_with({"mock": "location_data"})
+    assert isinstance(config.location, Location)
+    assert config.location.latitude == pytest.approx(52.3716)
+    assert config.location.region_name == "North Holland"
 
-    assert config.servers == ["MockServer1", "MockServer2"]
-    assert mock_server_from_dict.call_count == 2
-    mock_server_from_dict.assert_any_call({"mock": "server_1"})
-    mock_server_from_dict.assert_any_call({"mock": "server_2"})
+    assert all(isinstance(s, Server) for s in config.servers)
+    assert [(s.id, s.sponsor) for s in config.servers] == [(52365, "Odido"), (28922, "PhoenixNAP Global IT Services")]
 
 
-@patch.object(Location, "from_dict")
-@patch.object(Server, "from_dict")
-def test_api_config_from_dict_empty_servers(
-    mock_server_from_dict: MagicMock, mock_location_from_dict: MagicMock
-) -> None:
-    """Test that ApiConfig handles missing servers gracefully by defaulting to an empty list."""
+def test_api_config_isp_id_is_cast_to_int(raw_api_config: dict[str, Any]) -> None:
+    raw_api_config["ispId"] = "54321"
 
-    mock_location_from_dict.return_value = "MockLocationObject"
+    assert ApiConfig.from_dict(raw_api_config).isp_id == 54321
 
-    raw_api_data = {
-        "ipAddress": "1.1.1.1",
-        "ispName": "Acme Internet",
-        "ispId": "54321",
-        "guid": "dummy-guid",
-        "clientAuth": {"token": "dummy-token"},
-        "location": {"mock": "location_data"},
-    }
 
-    config = ApiConfig.from_dict(raw_api_data)
+def test_api_config_from_dict_empty_servers(raw_api_config: dict[str, Any]) -> None:
+    """Test that a missing servers key defaults to an empty list."""
 
-    assert config.servers == []
-    mock_server_from_dict.assert_not_called()
+    del raw_api_config["servers"]
+
+    assert ApiConfig.from_dict(raw_api_config).servers == []
+
+
+@pytest.mark.parametrize("missing", ["ipAddress", "ispName", "ispId", "guid", "clientAuth", "location"])
+def test_api_config_missing_required_key_raises(raw_api_config: dict[str, Any], missing: str) -> None:
+    del raw_api_config[missing]
+
+    with pytest.raises(KeyError):
+        ApiConfig.from_dict(raw_api_config)
+
+
+def test_api_config_bad_server_entry_raises(raw_api_config: dict[str, Any]) -> None:
+    """One malformed server must not be silently dropped from the list."""
+
+    del raw_api_config["servers"][1]["url"]
+
+    with pytest.raises(KeyError):
+        ApiConfig.from_dict(raw_api_config)

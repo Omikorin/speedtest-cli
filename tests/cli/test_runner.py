@@ -2,13 +2,39 @@
 Tests for the main CLI orchestrator.
 """
 
+import logging
 import signal
+from collections.abc import Iterator
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 from speedtest.cli.runner import _register_shutdown_handler, shell
+from speedtest.engine.config import ConfigFetchError
 from speedtest.exceptions import CLIError
-from speedtest.models import ApiConfig, RunContext, Server
+from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
 from speedtest.utils import ExitStatus
+
+
+@pytest.fixture
+def shell_env(
+    mock_run_context: RunContext, mock_api_config: ApiConfig, mock_server: Server
+) -> Iterator[SimpleNamespace]:
+    """Run shell() against a fake client that returns fixed measurements."""
+
+    with (
+        patch("speedtest.cli.runner.parse_args"),
+        patch("speedtest.cli.runner.RunContext.from_args", return_value=mock_run_context),
+        patch("speedtest.cli.runner.get_config", return_value=mock_api_config) as get_config,
+        patch("speedtest.cli.runner.SpeedtestClient") as client_class,
+        patch("speedtest.cli.runner.console.status"),
+    ):
+        client = client_class.return_value
+        client.get_target_servers.return_value = [mock_server]
+        client.select_best_server.return_value = (mock_server, 15.5)
+        client.download.return_value = (12_500_000, 100_000_000.0)
+        client.upload.return_value = (6_250_000, 50_000_000.0)
+        yield SimpleNamespace(client=client, get_config=get_config)
 
 
 def test_register_shutdown_handler() -> None:
@@ -165,3 +191,78 @@ def test_shell_catches_cli_error(
 
     status = shell()
     assert status == ExitStatus.ERROR.value
+
+
+def test_shell_catches_config_fetch_error(shell_env: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
+    """get_config raises ConfigFetchError, not CLIError, when speedtest.net refuses the request."""
+
+    shell_env.get_config.side_effect = ConfigFetchError("HTTP 403: Failed to fetch config.")
+
+    with caplog.at_level(logging.ERROR, logger="speedtest"):
+        status = shell()
+
+    assert status == ExitStatus.ERROR.value
+    assert "HTTP 403" in caplog.text
+    shell_env.client.select_best_server.assert_not_called()
+
+
+def test_shell_logs_measurements_in_requested_units(
+    shell_env: SimpleNamespace, mock_run_context: RunContext, caplog: pytest.LogCaptureFixture
+) -> None:
+    mock_run_context.unit_name = "B"
+    mock_run_context.unit_divisor = 8
+
+    with caplog.at_level(logging.INFO, logger="speedtest"):
+        shell()
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert "Latency: 15.50000 ms" in messages
+    assert "Download: 12.50 MB/s (12.50 MB)" in messages
+    assert "Upload: 6.25 MB/s (6.25 MB)" in messages
+
+
+def test_shell_hands_measurements_and_share_url_to_json_output(
+    shell_env: SimpleNamespace, mock_run_context: RunContext, mock_api_config: ApiConfig, mock_server: Server
+) -> None:
+    mock_run_context.share = True
+    mock_run_context.json_output = True
+    shell_env.client.generate_share_link.return_value = "https://www.speedtest.net/result/1.png"
+
+    with patch("speedtest.cli.runner.print_json") as print_json:
+        shell()
+
+    results, config = print_json.call_args.args
+    assert isinstance(results, SpeedtestResult)
+    assert results.server == mock_server
+    assert results.ping_ms == pytest.approx(15.5)
+    assert results.download_bps == pytest.approx(100_000_000.0)
+    assert results.upload_bytes == 6_250_000
+    assert results.share_url == "https://www.speedtest.net/result/1.png"
+    assert config is mock_api_config
+
+    # The share call must receive the measured results and the client config.
+    shared_results, shared_config = shell_env.client.generate_share_link.call_args.args
+    assert shared_results is results
+    assert shared_config is mock_api_config
+
+
+def test_shell_ping_only_run_leaves_speeds_unset(shell_env: SimpleNamespace, mock_run_context: RunContext) -> None:
+    mock_run_context.no_download = True
+    mock_run_context.no_upload = True
+    mock_run_context.json_output = True
+
+    with patch("speedtest.cli.runner.print_json") as print_json:
+        shell()
+
+    results = print_json.call_args.args[0]
+    assert results.ping_ms == pytest.approx(15.5)
+    assert results.download_bps is None
+    assert results.upload_bps is None
+
+
+def test_shell_passes_target_server_id_to_client(shell_env: SimpleNamespace, mock_run_context: RunContext) -> None:
+    mock_run_context.target_server_id = 52365
+
+    shell()
+
+    assert shell_env.client.get_target_servers.call_args.kwargs["target_id"] == 52365

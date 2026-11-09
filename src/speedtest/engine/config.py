@@ -7,6 +7,7 @@ from json import JSONDecodeError
 
 import httpx2
 
+from speedtest.exceptions import CLIError
 from speedtest.models import ApiConfig
 from speedtest.utils import CONFIG_URL
 
@@ -15,7 +16,7 @@ from .network import build_user_agent
 __all__ = ["ConfigFetchError", "fetch_raw_config", "get_config", "parse_config"]
 
 
-class ConfigFetchError(Exception):
+class ConfigFetchError(CLIError):
     """Raised when the configuration cannot be retrieved or parsed."""
 
 
