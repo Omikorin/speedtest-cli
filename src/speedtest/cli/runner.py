@@ -91,7 +91,7 @@ def shell() -> int:
 
         if ctx.share:
             with console.status("[bold magenta]Generating share link..."):
-                results.share_url = client.generate_share_link(results)
+                results.share_url = client.generate_share_link(results, ctx.api_config)
 
             logger.info(f"Share results: {results.share_url}")
 

@@ -1,10 +1,11 @@
-import urllib.error
-import urllib.parse
-import urllib.request
+import json
 from hashlib import md5
 from operator import attrgetter
 
+import httpx2
+
 from speedtest.engine import get_best_server, run_download_test, run_upload_test
+from speedtest.engine.network import build_user_agent
 from speedtest.exceptions import CLIError, NoMatchedServerError
 from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
 
@@ -55,59 +56,65 @@ class SpeedtestClient:
 
         return run_upload_test(best_server_url=server.url, ctx=ctx)
 
-    def generate_share_link(self, results: SpeedtestResult) -> str:
+    def generate_share_link(self, results: SpeedtestResult, config: ApiConfig) -> str:
         """POST data to the speedtest.net API to obtain a share results link."""
 
-        if not results.is_complete or not results.server:
+        if results.ping_ms is None or not results.server:
             raise CLIError("Cannot generate share link: missing test results.")
 
-        # The legacy Ookla API expects speeds in kilobits per second (kbps)
+        # The web client reports kbps and signs ping-upload-download with a fixed salt.
         download_kbps = round((results.download_bps or 0) / 1000.0)
         upload_kbps = round((results.upload_bps or 0) / 1000.0)
-        ping = round(results.ping_ms or 0)
+        ping = round(results.ping_ms)
 
-        hash_str = f"{ping}-{upload_kbps}-{download_kbps}-297aae72"
-        hash_val = md5(hash_str.encode()).hexdigest()
+        hash_val = md5(f"{ping}-{upload_kbps}-{download_kbps}-817d699764d33f89c".encode()).hexdigest()
+        host, _, port = results.server.host.partition(":")
 
-        api_parameters = {
-            "recommendedserverid": results.server.id,
-            "ping": ping,
-            "screenresolution": "",
-            "promo": "",
-            "download": download_kbps,
-            "screendpi": "",
-            "upload": upload_kbps,
-            "testmethod": "http",
-            "hash": hash_val,
-            "touchscreen": "none",
-            "startmode": "pingselect",
-            "accuracy": 1,
-            "bytesreceived": results.download_bytes or 0,
-            "bytessent": results.upload_bytes or 0,
+        payload: dict[str, object] = {
+            "app": {"sdk": {"commit": "a36027299986af441deb58cd730f432fcad58871", "version": "3.1.1"}},
             "serverid": results.server.id,
+            "testmethod": "http,http,http",
+            "source": "st4-js",
+            "configs": {"host": host, "port": int(port) if port else 8080},
+            "ping": ping,
+            "ispName": config.isp_name,
+            "guid": config.guid,
+            "hash": hash_val,
+            "clientip": config.ip_address,
+        }
+        if download_kbps:
+            payload["download"] = download_kbps
+        if upload_kbps:
+            payload["upload"] = upload_kbps
+
+        headers = {
+            "User-Agent": build_user_agent(),
+            "Accept": "application/json",
+            "Origin": "https://www.speedtest.net",
+            "Referer": "https://www.speedtest.net/",
+            "Content-Type": "application/json;charset=UTF-8",
         }
 
-        api_data = urllib.parse.urlencode(api_parameters).encode()
-        headers = {"Referer": "https://c.speedtest.net/flash/speedtest.swf"}
-
-        req = urllib.request.Request(
-            "https://www.speedtest.net/api/api.php", data=api_data, headers=headers, method="POST"
-        )
-
+        body = ""
         try:
-            with urllib.request.urlopen(req) as response:
-                if response.status != 200:
-                    raise CLIError(f"Could not submit results. HTTP {response.status}")
+            response = httpx2.post(
+                "https://www.speedtest.net/api/results.php",
+                content=json.dumps(payload),
+                headers=headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            body = response.text
+            resultid = response.json().get("resultid")
 
-                body = response.read().decode(errors="ignore")
-
-        except urllib.error.URLError as e:
+        except httpx2.HTTPStatusError as e:
+            raise CLIError(f"Could not submit results. HTTP {e.response.status_code}") from e
+        except httpx2.RequestError as e:
             raise CLIError(f"Failed to connect to Share API: {e}") from e
+        except ValueError, AttributeError:
+            resultid = None
 
-        qsargs = urllib.parse.parse_qs(body)
-        resultid = qsargs.get("resultid")
+        if not resultid:
+            raise CLIError(f"Could not parse result ID from API response: {body[:200]!r}")
 
-        if not resultid or len(resultid) != 1:
-            raise CLIError("Could not parse result ID from API response.")
-
-        return f"https://www.speedtest.net/result/{resultid[0]}.png"
+        return f"https://www.speedtest.net/result/{resultid}.png"
