@@ -77,8 +77,7 @@ def shell() -> int:
 
             dl_speed = results.get_download_speed(ctx.unit_divisor)
             dl_mb = results.get_downloaded_megabytes()
-            if dl_speed is not None and dl_mb is not None:
-                logger.info(f"Download: {dl_speed:.2f} M{ctx.unit_name}/s ({dl_mb:.2f} MB)")
+            logger.info(f"Download: {dl_speed:.2f} M{ctx.unit_name}/s ({dl_mb:.2f} MB)")
 
         if not ctx.no_upload:
             with console.status("[bold yellow]Testing upload speed..."):
@@ -86,8 +85,7 @@ def shell() -> int:
 
             ul_speed = results.get_upload_speed(ctx.unit_divisor)
             ul_mb = results.get_uploaded_megabytes()
-            if ul_speed is not None and ul_mb is not None:
-                logger.info(f"Upload: {ul_speed:.2f} M{ctx.unit_name}/s ({ul_mb:.2f} MB)")
+            logger.info(f"Upload: {ul_speed:.2f} M{ctx.unit_name}/s ({ul_mb:.2f} MB)")
 
         if ctx.share:
             with console.status("[bold magenta]Generating share link..."):
