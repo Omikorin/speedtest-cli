@@ -1,6 +1,6 @@
 # speedtest-cli
 
-[![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
+[![PyPI version](https://img.shields.io/pypi/v/speedtest-cli-ng.svg)](https://pypi.org/project/speedtest-cli-ng/)
 [![PyPI license](https://img.shields.io/pypi/l/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/speedtest-cli-ng.svg)](https://github.com/Omikorin/speedtest-cli)
 [![CI](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Omikorin/speedtest-cli/actions/workflows/ci.yml)
