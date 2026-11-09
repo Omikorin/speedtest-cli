@@ -7,7 +7,6 @@ import sys
 from unittest.mock import patch
 
 import pytest
-from pytest import CaptureFixture
 from speedtest.cli.display import print_json, print_server_list
 from speedtest.models import ApiConfig, Server, SpeedtestResult
 from speedtest.utils import ExitStatus
@@ -41,7 +40,7 @@ def test_print_server_list_broken_pipe(mock_server: Server) -> None:
         mock_print.assert_called_once()
 
 
-def test_print_json_without_client_config(capsys: CaptureFixture[str], mock_result: SpeedtestResult) -> None:
+def test_print_json_without_client_config(capsys: pytest.CaptureFixture[str], mock_result: SpeedtestResult) -> None:
     """Test JSON printing when no client config is provided (compact mode)."""
 
     # Mock sys.stdout.isatty to False for compact JSON (indent=None)
@@ -61,7 +60,7 @@ def test_print_json_without_client_config(capsys: CaptureFixture[str], mock_resu
 
 
 def test_print_json_with_client_config(
-    capsys: CaptureFixture[str], mock_result: SpeedtestResult, mock_api_config: ApiConfig
+    capsys: pytest.CaptureFixture[str], mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
     """Test JSON output includes the client configuration when provided."""
 
@@ -82,7 +81,7 @@ def test_print_json_with_client_config(
     assert data["client"]["location"]["longitude"] == pytest.approx(-74.0)
 
 
-def test_print_json_tty_indenting(capsys: CaptureFixture[str]) -> None:
+def test_print_json_tty_indenting(capsys: pytest.CaptureFixture[str]) -> None:
     """Test JSON output formats with indent=2 when attached to a TTY."""
 
     result = SpeedtestResult(ping_ms=10.0)
@@ -98,7 +97,7 @@ def test_print_json_tty_indenting(capsys: CaptureFixture[str]) -> None:
     assert json.loads(captured.out)["server"] is None
 
 
-def test_print_json_compact_when_piped(capsys: CaptureFixture[str], mock_result: SpeedtestResult) -> None:
+def test_print_json_compact_when_piped(capsys: pytest.CaptureFixture[str], mock_result: SpeedtestResult) -> None:
     """Piped output must be a single line so other tools can read it."""
 
     with patch.object(sys.stdout, "isatty", return_value=False):

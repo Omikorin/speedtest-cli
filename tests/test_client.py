@@ -112,9 +112,10 @@ def test_transfer_without_server_url_raises(
     method: str, client: SpeedtestClient, mock_server: Server, mock_run_context: RunContext
 ) -> None:
     server = replace(mock_server, url="")
+    transfer = getattr(client, method)
 
     with pytest.raises(CLIError, match="missing a valid URL"):
-        getattr(client, method)(server, mock_run_context)
+        transfer(server, mock_run_context)
 
 
 # --- generate_share_link ---

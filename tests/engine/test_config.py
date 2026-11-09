@@ -105,9 +105,10 @@ def test_parse_config_mapping_error() -> None:
 
 def test_parse_config_missing_auth_token(raw_api_config: dict[str, Any]) -> None:
     raw_api_config["clientAuth"] = {}
+    raw_json = json.dumps(raw_api_config)
 
     with pytest.raises(ConfigFetchError, match="Failed to map config to domain model"):
-        parse_config(json.dumps(raw_api_config))
+        parse_config(raw_json)
 
 
 @patch("speedtest.engine.config.httpx2.get")

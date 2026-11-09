@@ -53,7 +53,7 @@ def measure_tcp_latency(ip: str, port: int, timeout: float = 5.0) -> float:
     try:
         with socket.create_connection((ip, port), timeout=timeout):
             return (time.monotonic() - start_time) * 1000.0
-    except TimeoutError, OSError:
+    except OSError:
         return 3600000.0
 
 
