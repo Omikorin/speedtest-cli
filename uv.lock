@@ -288,7 +288,7 @@ wheels = [
 
 [[package]]
 name = "speedtest-cli-ng"
-version = "0.3.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx2" },
