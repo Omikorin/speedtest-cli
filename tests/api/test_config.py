@@ -9,25 +9,20 @@ from unittest.mock import MagicMock, patch
 
 import httpx2
 import pytest
-from speedtest.engine.config import (
-    ConfigFetchError,
-    fetch_raw_config,
-    get_config,
-    parse_config,
-)
-from speedtest.exceptions import SpeedtestError
-from speedtest.models import ApiConfig
-from speedtest.utils import CONFIG_URL
+from speedtest.api.config import fetch_raw_config, get_config, parse_config
+from speedtest.api.constants import CONFIG_URL
+from speedtest.api.exceptions import ApiError, ConfigFetchError
+from speedtest.api.models import ApiConfig
 
 
-def test_config_fetch_error_is_a_speedtest_error() -> None:
-    """main() only turns SpeedtestError into an exit code; anything else is a traceback."""
+def test_config_fetch_error_is_an_api_error() -> None:
+    """Callers of the library catch ApiError; every library failure must be one."""
 
-    assert issubclass(ConfigFetchError, SpeedtestError)
+    assert issubclass(ConfigFetchError, ApiError)
 
 
-@patch("speedtest.engine.config.httpx2.get")
-@patch("speedtest.engine.config.build_user_agent")
+@patch("speedtest.api.config.httpx2.get")
+@patch("speedtest.api.config.build_user_agent")
 def test_fetch_raw_config_success(mock_build_ua: MagicMock, mock_get: MagicMock) -> None:
     """Test that configuration is successfully fetched via HTTP."""
 
@@ -53,7 +48,7 @@ def test_fetch_raw_config_success(mock_build_ua: MagicMock, mock_get: MagicMock)
     mock_response.raise_for_status.assert_called_once()
 
 
-@patch("speedtest.engine.config.httpx2.get")
+@patch("speedtest.api.config.httpx2.get")
 def test_fetch_raw_config_http_status_error(mock_get: MagicMock) -> None:
     """Test that HTTP errors are caught and re-raised as ConfigFetchError."""
 
@@ -66,7 +61,7 @@ def test_fetch_raw_config_http_status_error(mock_get: MagicMock) -> None:
         fetch_raw_config()
 
 
-@patch("speedtest.engine.config.httpx2.get")
+@patch("speedtest.api.config.httpx2.get")
 def test_fetch_raw_config_request_error(mock_get: MagicMock) -> None:
     """Test that general network errors are caught and re-raised as ConfigFetchError."""
 
@@ -112,7 +107,7 @@ def test_parse_config_missing_auth_token(raw_api_config: dict[str, Any]) -> None
         parse_config(raw_json)
 
 
-@patch("speedtest.engine.config.httpx2.get")
+@patch("speedtest.api.config.httpx2.get")
 def test_get_config_fetches_and_parses(mock_get: MagicMock, raw_api_config: dict[str, Any]) -> None:
     """Test the whole path: HTTP response body in, domain model out."""
 
@@ -125,7 +120,7 @@ def test_get_config_fetches_and_parses(mock_get: MagicMock, raw_api_config: dict
     assert len(config.servers) == 2
 
 
-@patch("speedtest.engine.config.httpx2.get")
+@patch("speedtest.api.config.httpx2.get")
 def test_get_config_blocked_by_cdn_raises_config_error(mock_get: MagicMock) -> None:
     """Cloudflare answers 403 to unknown clients; that must surface as ConfigFetchError."""
 
@@ -148,7 +143,7 @@ def test_get_config_blocked_by_cdn_raises_config_error(mock_get: MagicMock) -> N
     ],
     ids=["nearby", "search", "location", "search-and-location"],
 )
-@patch("speedtest.engine.config.fetch_raw_config")
+@patch("speedtest.api.config.fetch_raw_config")
 def test_get_config_sends_server_discovery_params(
     mock_fetch: MagicMock, raw_api_config: dict[str, Any], kwargs: dict[str, Any], expected: dict[str, Any] | None
 ) -> None:
@@ -170,7 +165,7 @@ def _config_with_servers(raw_api_config: dict[str, Any], *servers: tuple[float, 
     return json.dumps(raw_api_config)
 
 
-@patch("speedtest.engine.config.fetch_raw_config")
+@patch("speedtest.api.config.fetch_raw_config")
 def test_get_config_measures_distance_from_the_client(mock_fetch: MagicMock, raw_api_config: dict[str, Any]) -> None:
     """The API reports 658 km for a server that is really about 450 km away; we must not trust it."""
 
@@ -182,7 +177,7 @@ def test_get_config_measures_distance_from_the_client(mock_fetch: MagicMock, raw
     assert config.servers[0].distance == pytest.approx(430, abs=5)
 
 
-@patch("speedtest.engine.config.fetch_raw_config")
+@patch("speedtest.api.config.fetch_raw_config")
 def test_get_config_measures_distance_from_the_given_location(
     mock_fetch: MagicMock, raw_api_config: dict[str, Any]
 ) -> None:
@@ -196,7 +191,7 @@ def test_get_config_measures_distance_from_the_given_location(
     assert from_ip.servers[0].distance > 9000
 
 
-@patch("speedtest.engine.config.fetch_raw_config")
+@patch("speedtest.api.config.fetch_raw_config")
 def test_get_config_distance_uses_the_ip_location_for_search(
     mock_fetch: MagicMock, raw_api_config: dict[str, Any]
 ) -> None:
@@ -207,7 +202,7 @@ def test_get_config_distance_uses_the_ip_location_for_search(
     assert config.servers[0].distance == pytest.approx(430, abs=5)
 
 
-@patch("speedtest.engine.config.fetch_raw_config")
+@patch("speedtest.api.config.fetch_raw_config")
 def test_get_config_keeps_other_server_fields(mock_fetch: MagicMock, raw_api_config: dict[str, Any]) -> None:
     mock_fetch.return_value = _config_with_servers(raw_api_config, (48.8566, 2.3522, 658))
 
@@ -216,7 +211,7 @@ def test_get_config_keeps_other_server_fields(mock_fetch: MagicMock, raw_api_con
     assert (server.id, server.name, server.country) == (1, "Amsterdam", "Netherlands")
 
 
-@patch("speedtest.engine.config.httpx2.get")
+@patch("speedtest.api.config.httpx2.get")
 def test_fetch_raw_config_forwards_query_params(mock_get: MagicMock) -> None:
     mock_get.return_value = MagicMock(text="{}")
 

@@ -3,7 +3,7 @@ Tests for the geographic helpers.
 """
 
 import pytest
-from speedtest.utils import great_circle_km
+from speedtest.api.geo import great_circle_km
 
 
 def test_same_point_is_zero() -> None:

@@ -2,9 +2,8 @@ import argparse
 import threading
 from dataclasses import dataclass
 
+from speedtest.api import ApiConfig
 from speedtest.exceptions import CLIError
-
-from .api_config import ApiConfig
 
 
 @dataclass(kw_only=True)

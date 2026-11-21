@@ -1,9 +1,8 @@
-# speedtest/engine/network.py
-
 """
 Low-level network utilities, HTTP workers, and payload generation.
 """
 
+import logging
 import platform
 import socket
 import threading
@@ -13,9 +12,10 @@ from functools import cache
 
 import httpx2
 
-from speedtest import __version__
-from speedtest.exceptions import UploadTimeoutError
-from speedtest.utils import logger
+from ._version import __version__
+from .exceptions import UploadTimeoutError
+
+logger = logging.getLogger(__name__)
 
 # --- Constants ---
 UPLOAD_RESPONSE_TRUNCATION = 11

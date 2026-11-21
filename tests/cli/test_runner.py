@@ -9,11 +9,20 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from speedtest.api import (
+    DEFAULT_SERVER_LIMIT,
+    ApiConfig,
+    ApiError,
+    BestServerFailureError,
+    ConfigFetchError,
+    InvalidServerError,
+    Server,
+    ShareError,
+    SpeedtestResult,
+)
+from speedtest.cli.context import RunContext
 from speedtest.cli.runner import _register_shutdown_handler, shell
-from speedtest.client import DEFAULT_SERVER_LIMIT
-from speedtest.engine.config import ConfigFetchError
 from speedtest.exceptions import CLIError
-from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
 from speedtest.utils import ExitStatus
 
 
@@ -276,6 +285,36 @@ def test_shell_passes_search_and_location_to_config(shell_env: SimpleNamespace, 
     shell()
 
     shell_env.get_config.assert_called_once_with(search="Germany", location=(35.68, 139.69))
+
+
+def test_shell_hands_thread_count_and_cancellation_to_the_transfers(
+    shell_env: SimpleNamespace, mock_run_context: RunContext, mock_server: Server
+) -> None:
+    mock_run_context.threads = 7
+
+    shell()
+
+    for transfer in (shell_env.client.download, shell_env.client.upload):
+        assert transfer.call_args.args == (mock_server,)
+        assert transfer.call_args.kwargs["threads"] == 7
+        assert transfer.call_args.kwargs["shutdown_event"] is mock_run_context.shutdown_event
+
+
+@pytest.mark.parametrize(
+    "error",
+    [InvalidServerError("bad server"), BestServerFailureError("no ping"), ShareError("no link")],
+    ids=lambda e: type(e).__name__,
+)
+def test_shell_reports_any_library_error_as_an_error_exit(
+    shell_env: SimpleNamespace, error: ApiError, caplog: pytest.LogCaptureFixture
+) -> None:
+    shell_env.client.select_best_server.side_effect = error
+
+    with caplog.at_level(logging.ERROR, logger="speedtest"):
+        status = shell()
+
+    assert status == ExitStatus.ERROR.value
+    assert str(error) in caplog.text
 
 
 def test_shell_limits_servers_when_testing(shell_env: SimpleNamespace) -> None:

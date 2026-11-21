@@ -2,6 +2,7 @@
 Handles multi-threaded execution of download and upload tests.
 """
 
+import logging
 import math
 import threading
 import time
@@ -9,9 +10,6 @@ from collections.abc import Iterator
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
 import httpx2
-
-from speedtest.models import RunContext
-from speedtest.utils import logger
 
 from .network import (
     HTTPUploaderData,
@@ -21,6 +19,8 @@ from .network import (
 )
 
 __all__ = ["run_download_test", "run_upload_test"]
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_download_requests(best_server_url: str) -> Iterator[httpx2.Request]:
@@ -86,8 +86,17 @@ def _resolve_upload_url(url: str) -> str:
         return url
 
 
-def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
+def _require_threads(threads: int) -> None:
+    if threads < 1:
+        raise ValueError("threads must be at least 1")
+
+
+def run_download_test(
+    best_server_url: str, threads: int = 4, shutdown_event: threading.Event | None = None
+) -> tuple[int, float]:
     """Execute a multi-threaded download speed test leveraging connection pooling."""
+
+    _require_threads(threads)
 
     if not best_server_url:
         return 0, 0.0
@@ -100,16 +109,15 @@ def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float
 
     with (
         httpx2.Client(
-            limits=httpx2.Limits(max_connections=ctx.threads),
+            limits=httpx2.Limits(max_connections=threads),
             timeout=test_length,
             follow_redirects=True,
             verify=False,
         ) as client,
-        ThreadPoolExecutor(max_workers=ctx.threads) as executor,
+        ThreadPoolExecutor(max_workers=threads) as executor,
     ):
         futures: list[Future[int]] = [
-            executor.submit(download_worker, client, req, start_time, test_length, ctx.shutdown_event)
-            for req in requests
+            executor.submit(download_worker, client, req, start_time, test_length, shutdown_event) for req in requests
         ]
 
         for future in as_completed(futures):
@@ -118,15 +126,19 @@ def run_download_test(best_server_url: str, ctx: RunContext) -> tuple[int, float
             except (OSError, httpx2.HTTPError) as e:
                 logger.debug(f"Download thread failed: {e}")
 
-            if ctx.shutdown_event and ctx.shutdown_event.is_set():
+            if shutdown_event and shutdown_event.is_set():
                 break
 
     elapsed = max(time.monotonic() - start_time, 0.001)
     return bytes_received, (bytes_received / elapsed) * 8.0
 
 
-def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
+def run_upload_test(
+    best_server_url: str, threads: int = 4, shutdown_event: threading.Event | None = None
+) -> tuple[int, float]:
     """Execute a multi-threaded upload speed test leveraging connection pooling."""
+
+    _require_threads(threads)
 
     if not best_server_url:
         return 0, 0.0
@@ -135,22 +147,22 @@ def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
     bytes_sent = 0
 
     best_server_url = _resolve_upload_url(best_server_url)
-    tasks = list(_generate_upload_payloads(best_server_url, test_length, ctx.shutdown_event))
+    tasks = list(_generate_upload_payloads(best_server_url, test_length, shutdown_event))
     start_time = time.monotonic()
 
     with (
         httpx2.Client(
-            limits=httpx2.Limits(max_connections=ctx.threads),
+            limits=httpx2.Limits(max_connections=threads),
             timeout=test_length,
             follow_redirects=True,
             verify=False,
         ) as client,
-        ThreadPoolExecutor(max_workers=ctx.threads) as executor,
+        ThreadPoolExecutor(max_workers=threads) as executor,
     ):
         futures: list[Future[int]] = []
         for req, payload in tasks:
             payload.start_time = start_time
-            futures.append(executor.submit(upload_worker, client, req, payload, ctx.shutdown_event))
+            futures.append(executor.submit(upload_worker, client, req, payload, shutdown_event))
 
         for future in as_completed(futures):
             try:
@@ -158,7 +170,7 @@ def run_upload_test(best_server_url: str, ctx: RunContext) -> tuple[int, float]:
             except (OSError, httpx2.HTTPError) as e:
                 logger.debug(f"Upload thread failed: {e}")
 
-            if ctx.shutdown_event and ctx.shutdown_event.is_set():
+            if shutdown_event and shutdown_event.is_set():
                 break
 
     elapsed = max(time.monotonic() - start_time, 0.001)

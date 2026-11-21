@@ -2,16 +2,17 @@
 Handles latency ranking of speedtest.net servers using raw TCP handshakes.
 """
 
+import logging
 import socket
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
 
-from speedtest.exceptions import BestServerFailureError
-from speedtest.models import Server
-from speedtest.utils import logger
-
+from .exceptions import BestServerFailureError
+from .models import Server
 from .network import measure_tcp_latency
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["find_fastest_server", "get_best_server"]
 

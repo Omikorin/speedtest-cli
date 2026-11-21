@@ -3,7 +3,7 @@ Tests for the SpeedtestResult domain model.
 """
 
 import pytest
-from speedtest.models import SpeedtestResult
+from speedtest.api.models import SpeedtestResult
 
 
 def test_is_complete_property() -> None:

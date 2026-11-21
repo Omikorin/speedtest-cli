@@ -5,7 +5,7 @@ Tests for the ApiConfig domain model.
 from typing import Any
 
 import pytest
-from speedtest.models import ApiConfig, Location, Server
+from speedtest.api.models import ApiConfig, Location, Server
 
 
 def test_api_config_from_dict(raw_api_config: dict[str, Any]) -> None:

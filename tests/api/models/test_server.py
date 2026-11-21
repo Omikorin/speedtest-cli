@@ -3,7 +3,7 @@ Tests for the Server domain model.
 """
 
 import pytest
-from speedtest.models import Server
+from speedtest.api.models import Server
 
 
 def test_server_from_dict_full() -> None:

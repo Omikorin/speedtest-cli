@@ -7,12 +7,11 @@ import signal
 import threading
 from types import FrameType
 
-from speedtest.client import DEFAULT_SERVER_LIMIT, SpeedtestClient
-from speedtest.engine import get_config
+from speedtest.api import DEFAULT_SERVER_LIMIT, ApiError, SpeedtestClient, SpeedtestResult, get_config
 from speedtest.exceptions import CLIError
-from speedtest.models import RunContext, SpeedtestResult
 from speedtest.utils import ExitStatus, console, logger, setup_logging
 
+from .context import RunContext
 from .display import print_json, print_server_list
 from .parser import parse_args
 
@@ -77,7 +76,9 @@ def shell() -> int:
 
         if not ctx.no_download:
             with console.status("[bold green]Testing download speed..."):
-                results.download_bytes, results.download_bps = client.download(server=results.server, ctx=ctx)
+                results.download_bytes, results.download_bps = client.download(
+                    results.server, threads=ctx.threads, shutdown_event=ctx.shutdown_event
+                )
 
             dl_speed = results.get_download_speed(ctx.unit_divisor)
             dl_mb = results.get_downloaded_megabytes()
@@ -85,7 +86,9 @@ def shell() -> int:
 
         if not ctx.no_upload:
             with console.status("[bold yellow]Testing upload speed..."):
-                results.upload_bytes, results.upload_bps = client.upload(server=results.server, ctx=ctx)
+                results.upload_bytes, results.upload_bps = client.upload(
+                    results.server, threads=ctx.threads, shutdown_event=ctx.shutdown_event
+                )
 
             ul_speed = results.get_upload_speed(ctx.unit_divisor)
             ul_mb = results.get_uploaded_megabytes()
@@ -102,7 +105,7 @@ def shell() -> int:
         if ctx.json_output:
             print_json(results, ctx.api_config)
 
-    except CLIError as e:
+    except (ApiError, CLIError) as e:
         logger.error(str(e))
         return ExitStatus.ERROR.value
 

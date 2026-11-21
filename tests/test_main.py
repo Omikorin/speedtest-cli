@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from speedtest.__main__ import main
-from speedtest.engine.config import ConfigFetchError
+from speedtest.api import ApiError, ConfigFetchError
 from speedtest.exceptions import CLIError, SpeedtestError
 from speedtest.utils import ExitStatus
 
@@ -131,3 +131,14 @@ def test_main_reports_config_failure_instead_of_crashing(
 
 def test_cli_error_is_a_speedtest_error() -> None:
     assert issubclass(CLIError, SpeedtestError)
+
+
+@patch("speedtest.__main__.logger")
+@patch("speedtest.__main__.shell")
+def test_main_turns_a_library_error_into_an_error_exit(mock_shell: MagicMock, mock_logger: MagicMock) -> None:
+    """The library's errors are not SpeedtestErrors, so main() must handle them itself."""
+
+    mock_shell.side_effect = ApiError("library failure")
+
+    assert main() == ExitStatus.ERROR.value
+    mock_logger.error.assert_called_once_with("library failure")

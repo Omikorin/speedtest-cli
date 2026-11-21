@@ -1,35 +1,13 @@
 """
-Speedtest-related exceptions.
+Exceptions of the command-line program.
 """
 
-__all__ = [
-    "BestServerFailureError",
-    "CLIError",
-    "NoMatchedServerError",
-    "SpeedtestError",
-    "UploadTimeoutError",
-]
+__all__ = ["CLIError", "SpeedtestError"]
 
 
 class SpeedtestError(Exception):
-    """Base exception for this module."""
+    """Base exception for the program."""
 
 
 class CLIError(SpeedtestError):
     """Generic exception for raising errors during CLI operation."""
-
-
-class NoMatchedServerError(SpeedtestError):
-    """No server matched when filtering."""
-
-
-class UploadTimeoutError(SpeedtestError):
-    """
-    testlength configuration reached during upload.
-
-    Used to ensure the upload halts when no additional data should be sent.
-    """
-
-
-class BestServerFailureError(SpeedtestError):
-    """Unable to determine best server."""

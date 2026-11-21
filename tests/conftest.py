@@ -7,7 +7,8 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
-from speedtest.models import ApiConfig, Location, RunContext, Server, SpeedtestResult
+from speedtest.api import ApiConfig, Location, Server, SpeedtestResult
+from speedtest.cli.context import RunContext
 from speedtest.utils import console, logger
 
 

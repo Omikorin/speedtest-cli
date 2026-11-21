@@ -9,17 +9,13 @@ from json import JSONDecodeError
 
 import httpx2
 
-from speedtest.exceptions import CLIError
-from speedtest.models import ApiConfig
-from speedtest.utils import CONFIG_URL, great_circle_km
-
+from .constants import CONFIG_URL
+from .exceptions import ConfigFetchError
+from .geo import great_circle_km
+from .models import ApiConfig
 from .network import build_user_agent
 
-__all__ = ["ConfigFetchError", "fetch_raw_config", "get_config", "parse_config"]
-
-
-class ConfigFetchError(CLIError):
-    """Raised when the configuration cannot be retrieved or parsed."""
+__all__ = ["fetch_raw_config", "get_config", "parse_config"]
 
 
 def fetch_raw_config(url: str = CONFIG_URL, params: Mapping[str, str | float] | None = None) -> str:

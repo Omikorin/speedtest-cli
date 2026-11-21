@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 from rich.table import Table
 
-from speedtest.models import ApiConfig, Server, SpeedtestResult
+from speedtest.api import ApiConfig, Server, SpeedtestResult
 from speedtest.utils import ExitStatus, console
 
 __all__ = ["print_json", "print_server_list"]

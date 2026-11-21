@@ -7,9 +7,9 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from speedtest.engine.servers import _ping_server, find_fastest_server, get_best_server
-from speedtest.exceptions import BestServerFailureError
-from speedtest.models import Server
+from speedtest.api.exceptions import BestServerFailureError
+from speedtest.api.models import Server
+from speedtest.api.servers import _ping_server, find_fastest_server, get_best_server
 
 PENALTY_MS = 3600000.0
 
@@ -29,7 +29,7 @@ def test_ping_server_url_without_host_is_penalised(mock_server: Server) -> None:
     assert latency == PENALTY_MS
 
 
-@patch("speedtest.engine.servers.socket.gethostbyname", side_effect=socket.gaierror)
+@patch("speedtest.api.servers.socket.gethostbyname", side_effect=socket.gaierror)
 def test_ping_server_dns_failure_is_penalised(_mock_dns: MagicMock, mock_server: Server) -> None:
     _, latency = _ping_server(mock_server)
 
@@ -44,8 +44,8 @@ def test_ping_server_dns_failure_is_penalised(_mock_dns: MagicMock, mock_server:
         ("http://speedtest.example.com:8080/upload.php", 8080),
     ],
 )
-@patch("speedtest.engine.servers.measure_tcp_latency")
-@patch("speedtest.engine.servers.socket.gethostbyname", return_value="10.0.0.1")
+@patch("speedtest.api.servers.measure_tcp_latency")
+@patch("speedtest.api.servers.socket.gethostbyname", return_value="10.0.0.1")
 def test_ping_server_averages_handshakes_on_resolved_port(
     _mock_dns: MagicMock, mock_latency: MagicMock, url: str, expected_port: int, mock_server: Server
 ) -> None:
@@ -58,7 +58,7 @@ def test_ping_server_averages_handshakes_on_resolved_port(
     assert [c.args for c in mock_latency.call_args_list] == [("10.0.0.1", expected_port)] * 3
 
 
-@patch("speedtest.engine.servers.socket.gethostbyname", return_value="10.0.0.1")
+@patch("speedtest.api.servers.socket.gethostbyname", return_value="10.0.0.1")
 def test_ping_server_zero_pings_is_penalised(_mock_dns: MagicMock, mock_server: Server) -> None:
     _, latency = _ping_server(mock_server, pings=0)
 
@@ -92,7 +92,7 @@ def test_get_best_server_picks_lowest_latency(mock_server: Server) -> None:
     servers = [replace(mock_server, id=i) for i in (1, 2, 3)]
     latencies = {1: 40.0, 2: 8.0, 3: 25.0}
 
-    with patch("speedtest.engine.servers._ping_server", side_effect=lambda s: (s, latencies[s.id])):
+    with patch("speedtest.api.servers._ping_server", side_effect=lambda s: (s, latencies[s.id])):
         best, latency = get_best_server(servers)
 
     assert (best.id, latency) == (2, 8.0)
@@ -106,7 +106,7 @@ def test_get_best_server_skips_servers_whose_ping_raises(mock_server: Server) ->
             raise OSError("network down")
         return server, 99.0
 
-    with patch("speedtest.engine.servers._ping_server", side_effect=ping):
+    with patch("speedtest.api.servers._ping_server", side_effect=ping):
         best, _ = get_best_server(servers)
 
     assert best.id == 2
@@ -114,7 +114,7 @@ def test_get_best_server_skips_servers_whose_ping_raises(mock_server: Server) ->
 
 def test_get_best_server_all_pings_failing_raises(mock_server: Server) -> None:
     with (
-        patch("speedtest.engine.servers._ping_server", side_effect=OSError("down")),
+        patch("speedtest.api.servers._ping_server", side_effect=OSError("down")),
         pytest.raises(BestServerFailureError),
     ):
         get_best_server([mock_server])

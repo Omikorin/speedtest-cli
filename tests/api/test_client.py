@@ -3,15 +3,21 @@ Tests for the SpeedtestClient orchestration.
 """
 
 import json
+import threading
 from dataclasses import replace
 from hashlib import md5
 from unittest.mock import MagicMock, patch
 
 import httpx2
 import pytest
-from speedtest.client import SpeedtestClient
-from speedtest.exceptions import CLIError, NoMatchedServerError
-from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
+from speedtest.api.client import SpeedtestClient
+from speedtest.api.exceptions import (
+    BestServerFailureError,
+    InvalidServerError,
+    NoMatchedServerError,
+    ShareError,
+)
+from speedtest.api.models import ApiConfig, Server, SpeedtestResult
 
 SHARE_URL = "https://www.speedtest.net/api/results.php"
 
@@ -75,11 +81,11 @@ def test_get_target_servers_without_limit_returns_every_server(
 
 
 def test_select_best_server_empty_list_raises(client: SpeedtestClient) -> None:
-    with pytest.raises(CLIError, match="No servers provided"):
+    with pytest.raises(BestServerFailureError, match="No servers provided"):
         client.select_best_server([])
 
 
-@patch("speedtest.client.get_best_server")
+@patch("speedtest.api.client.get_best_server")
 def test_select_best_server_returns_pinger_result(
     mock_best: MagicMock, client: SpeedtestClient, mock_server: Server
 ) -> None:
@@ -88,50 +94,61 @@ def test_select_best_server_returns_pinger_result(
     assert client.select_best_server([mock_server]) == (mock_server, 12.5)
 
 
-@patch("speedtest.client.get_best_server")
+@patch("speedtest.api.client.get_best_server")
 def test_select_best_server_falsy_result_raises(
     mock_best: MagicMock, client: SpeedtestClient, mock_server: Server
 ) -> None:
     mock_best.return_value = (None, 0.0)
 
-    with pytest.raises(CLIError, match="Failed to identify"):
+    with pytest.raises(BestServerFailureError, match="Failed to identify"):
         client.select_best_server([mock_server])
 
 
 # --- download / upload ---
 
 
-@patch("speedtest.client.run_download_test", return_value=(10, 80.0))
-def test_download_delegates_with_server_url(
-    mock_run: MagicMock, client: SpeedtestClient, mock_server: Server, mock_run_context: RunContext
-) -> None:
-    assert client.download(mock_server, mock_run_context) == (10, 80.0)
-    mock_run.assert_called_once_with(best_server_url=mock_server.url, ctx=mock_run_context)
+@patch("speedtest.api.client.run_download_test", return_value=(10, 80.0))
+def test_download_delegates_with_server_url(mock_run: MagicMock, client: SpeedtestClient, mock_server: Server) -> None:
+    event = threading.Event()
+
+    assert client.download(mock_server, threads=7, shutdown_event=event) == (10, 80.0)
+    mock_run.assert_called_once_with(best_server_url=mock_server.url, threads=7, shutdown_event=event)
 
 
-@patch("speedtest.client.run_upload_test", return_value=(20, 160.0))
-def test_upload_delegates_with_server_url(
-    mock_run: MagicMock, client: SpeedtestClient, mock_server: Server, mock_run_context: RunContext
-) -> None:
-    assert client.upload(mock_server, mock_run_context) == (20, 160.0)
-    mock_run.assert_called_once_with(best_server_url=mock_server.url, ctx=mock_run_context)
+@patch("speedtest.api.client.run_upload_test", return_value=(20, 160.0))
+def test_upload_delegates_with_server_url(mock_run: MagicMock, client: SpeedtestClient, mock_server: Server) -> None:
+    event = threading.Event()
+
+    assert client.upload(mock_server, threads=7, shutdown_event=event) == (20, 160.0)
+    mock_run.assert_called_once_with(best_server_url=mock_server.url, threads=7, shutdown_event=event)
 
 
 @pytest.mark.parametrize("method", ["download", "upload"])
-def test_transfer_without_server_url_raises(
-    method: str, client: SpeedtestClient, mock_server: Server, mock_run_context: RunContext
+@patch("speedtest.api.client.run_upload_test", return_value=(0, 0.0))
+@patch("speedtest.api.client.run_download_test", return_value=(0, 0.0))
+def test_transfer_defaults_to_four_threads_and_no_cancellation(
+    mock_download: MagicMock, mock_upload: MagicMock, method: str, client: SpeedtestClient, mock_server: Server
 ) -> None:
+    getattr(client, method)(mock_server)
+
+    runner = mock_download if method == "download" else mock_upload
+    assert runner.call_args.kwargs["threads"] == 4
+    assert runner.call_args.kwargs["shutdown_event"] is None
+
+
+@pytest.mark.parametrize("method", ["download", "upload"])
+def test_transfer_without_server_url_raises(method: str, client: SpeedtestClient, mock_server: Server) -> None:
     server = replace(mock_server, url="")
     transfer = getattr(client, method)
 
-    with pytest.raises(CLIError, match="missing a valid URL"):
-        transfer(server, mock_run_context)
+    with pytest.raises(InvalidServerError, match="missing a valid URL"):
+        transfer(server)
 
 
 # --- generate_share_link ---
 
 
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_success_sends_signed_payload(
     mock_post: MagicMock, client: SpeedtestClient, mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
@@ -159,7 +176,7 @@ def test_share_link_success_sends_signed_payload(
     assert sent.kwargs["headers"]["Origin"] == "https://www.speedtest.net"
 
 
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_uses_default_port_when_host_has_none(
     mock_post: MagicMock, client: SpeedtestClient, mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
@@ -172,7 +189,7 @@ def test_share_link_uses_default_port_when_host_has_none(
     assert _sent_payload(mock_post)["configs"] == {"host": "speedtest.example.com", "port": 8080}
 
 
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_omits_missing_speeds(
     mock_post: MagicMock, client: SpeedtestClient, mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
@@ -193,7 +210,7 @@ def test_share_link_requires_ping(
 ) -> None:
     mock_result.ping_ms = None
 
-    with pytest.raises(CLIError, match="missing test results"):
+    with pytest.raises(ShareError, match="missing test results"):
         client.generate_share_link(mock_result, mock_api_config)
 
 
@@ -202,27 +219,27 @@ def test_share_link_requires_server(
 ) -> None:
     mock_result.server = None
 
-    with pytest.raises(CLIError, match="missing test results"):
+    with pytest.raises(ShareError, match="missing test results"):
         client.generate_share_link(mock_result, mock_api_config)
 
 
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_http_error_status(
     mock_post: MagicMock, client: SpeedtestClient, mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
     mock_post.return_value = _response(403, text="403 Forbidden")
 
-    with pytest.raises(CLIError, match="HTTP 403"):
+    with pytest.raises(ShareError, match="HTTP 403"):
         client.generate_share_link(mock_result, mock_api_config)
 
 
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_network_error(
     mock_post: MagicMock, client: SpeedtestClient, mock_result: SpeedtestResult, mock_api_config: ApiConfig
 ) -> None:
     mock_post.side_effect = httpx2.ConnectError("boom")
 
-    with pytest.raises(CLIError, match="Failed to connect to Share API"):
+    with pytest.raises(ShareError, match="Failed to connect to Share API"):
         client.generate_share_link(mock_result, mock_api_config)
 
 
@@ -236,7 +253,7 @@ def test_share_link_network_error(
     ],
     ids=["invalid-json", "empty-list", "no-resultid", "null-resultid"],
 )
-@patch("speedtest.client.httpx2.post")
+@patch("speedtest.api.client.httpx2.post")
 def test_share_link_unusable_response(
     mock_post: MagicMock,
     response: httpx2.Response,
@@ -246,5 +263,5 @@ def test_share_link_unusable_response(
 ) -> None:
     mock_post.return_value = response
 
-    with pytest.raises(CLIError, match="Could not parse result ID"):
+    with pytest.raises(ShareError, match="Could not parse result ID"):
         client.generate_share_link(mock_result, mock_api_config)

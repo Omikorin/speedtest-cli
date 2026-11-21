@@ -3,7 +3,7 @@ Tests for the Location domain model.
 """
 
 import pytest
-from speedtest.models import Location
+from speedtest.api.models import Location
 
 
 def test_location_from_dict() -> None:

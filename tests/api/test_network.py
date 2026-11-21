@@ -12,8 +12,9 @@ from unittest.mock import MagicMock, patch
 
 import httpx2
 import pytest
-from speedtest import __version__
-from speedtest.engine.network import (
+from speedtest.api._version import __version__
+from speedtest.api.exceptions import UploadTimeoutError
+from speedtest.api.network import (
     CHUNK_SIZE_BYTES,
     UPLOAD_BODY_PREFIX,
     HTTPUploaderData,
@@ -22,7 +23,6 @@ from speedtest.engine.network import (
     measure_tcp_latency,
     upload_worker,
 )
-from speedtest.exceptions import UploadTimeoutError
 
 PENALTY_MS = 3600000.0
 
@@ -57,7 +57,7 @@ def test_build_user_agent_identifies_the_tool() -> None:
 # --- measure_tcp_latency ---
 
 
-@patch("speedtest.engine.network.socket.create_connection")
+@patch("speedtest.api.network.socket.create_connection")
 def test_measure_tcp_latency_returns_elapsed_milliseconds(mock_connect: MagicMock) -> None:
     latency = measure_tcp_latency("10.0.0.1", 80, timeout=2.0)
 
@@ -66,7 +66,7 @@ def test_measure_tcp_latency_returns_elapsed_milliseconds(mock_connect: MagicMoc
 
 
 @pytest.mark.parametrize("error", [TimeoutError(), ConnectionRefusedError()])
-@patch("speedtest.engine.network.socket.create_connection")
+@patch("speedtest.api.network.socket.create_connection")
 def test_measure_tcp_latency_failure_is_penalised(mock_connect: MagicMock, error: OSError) -> None:
     mock_connect.side_effect = error
 

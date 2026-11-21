@@ -4,19 +4,19 @@ Tests for the multi-threaded download and upload orchestration.
 
 import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
 import httpx2
 import pytest
-from speedtest.engine.transfer import (
+from speedtest.api.transfer import (
     _generate_download_requests,
     _generate_upload_payloads,
     _resolve_upload_url,
     run_download_test,
     run_upload_test,
 )
-from speedtest.models import RunContext
 
 Handler = Callable[[httpx2.Request], httpx2.Response]
 
@@ -113,57 +113,66 @@ def test_resolve_upload_url_falls_back_on_network_error(mock_http: Callable[[Han
 # --- run_download_test ---
 
 
-def test_run_download_test_without_url_does_nothing(mock_run_context: RunContext) -> None:
-    assert run_download_test("", mock_run_context) == (0, 0.0)
+def test_run_download_test_without_url_does_nothing() -> None:
+    assert run_download_test("") == (0, 0.0)
 
 
-def test_run_download_test_sums_all_responses(
-    mock_http: Callable[[Handler], None], mock_run_context: RunContext
-) -> None:
+@pytest.mark.parametrize("runner", [run_download_test, run_upload_test])
+@pytest.mark.parametrize("threads", [0, -1])
+def test_transfer_rejects_non_positive_thread_count(runner: Callable[..., object], threads: int) -> None:
+    with pytest.raises(ValueError, match="threads must be at least 1"):
+        runner("http://host.example/upload.php", threads=threads)
+
+
+def test_run_download_test_sums_all_responses(mock_http: Callable[[Handler], None]) -> None:
     mock_http(lambda _: httpx2.Response(200, content=b"x" * 1000))
 
-    received, bps = run_download_test("http://host.example/speedtest/upload.php", mock_run_context)
+    received, bps = run_download_test("http://host.example/speedtest/upload.php")
 
     assert received == 40 * 1000
     assert bps > 0
 
 
-def test_run_download_test_survives_failing_workers(mock_run_context: RunContext) -> None:
+def test_run_download_test_survives_failing_workers() -> None:
     def worker(_client: object, request: httpx2.Request, *_: object) -> int:
         if "random350x350" in str(request.url):
             raise OSError("socket closed")
         return 100
 
-    with patch("speedtest.engine.transfer.download_worker", side_effect=worker):
-        received, _ = run_download_test("http://host.example/speedtest/upload.php", mock_run_context)
+    with patch("speedtest.api.transfer.download_worker", side_effect=worker):
+        received, _ = run_download_test("http://host.example/speedtest/upload.php")
 
     assert received == 36 * 100  # 4 of the 40 requests failed
 
 
-def test_run_download_test_stops_collecting_on_shutdown(mock_run_context: RunContext) -> None:
+def test_run_download_test_stops_collecting_on_shutdown() -> None:
     event = threading.Event()
-    mock_run_context.shutdown_event = event
 
     def worker(*_: object) -> int:
         event.set()
         return 100
 
-    with patch("speedtest.engine.transfer.download_worker", side_effect=worker):
-        received, _ = run_download_test("http://host.example/speedtest/upload.php", mock_run_context)
+    with patch("speedtest.api.transfer.download_worker", side_effect=worker):
+        received, _ = run_download_test("http://host.example/speedtest/upload.php", shutdown_event=event)
 
     assert received == 100  # only the first completed future was counted
+
+
+def test_run_download_test_honours_thread_count() -> None:
+    with patch("speedtest.api.transfer.ThreadPoolExecutor", wraps=ThreadPoolExecutor) as executor:
+        run_download_test("http://host.example/speedtest/upload.php", threads=3)
+
+    assert executor.call_args.kwargs["max_workers"] == 3
 
 
 # --- run_upload_test ---
 
 
-def test_run_upload_test_without_url_does_nothing(mock_run_context: RunContext) -> None:
-    assert run_upload_test("", mock_run_context) == (0, 0.0)
+def test_run_upload_test_without_url_does_nothing() -> None:
+    assert run_upload_test("") == (0, 0.0)
 
 
-def test_run_upload_test_sends_every_byte_to_resolved_url(
-    mock_http: Callable[[Handler], None], mock_run_context: RunContext
-) -> None:
+def test_run_upload_test_sends_every_byte_to_resolved_url(mock_http: Callable[[Handler], None]) -> None:
     final = "https://server-1.example.net:8080/speedtest/upload.php"
     hosts: set[str] = set()
 
@@ -176,14 +185,14 @@ def test_run_upload_test_sends_every_byte_to_resolved_url(
 
     mock_http(handler)
 
-    sent, bps = run_upload_test("http://host.example/speedtest/upload.php", mock_run_context)
+    sent, bps = run_upload_test("http://host.example/speedtest/upload.php")
 
     assert sent == UPLOAD_TOTAL_BYTES
     assert bps > 0
     assert hosts == {"server-1.example.net"}
 
 
-def test_run_upload_test_survives_failing_workers(mock_run_context: RunContext) -> None:
+def test_run_upload_test_survives_failing_workers() -> None:
     calls = 0
     lock = threading.Lock()
 
@@ -197,32 +206,31 @@ def test_run_upload_test_survives_failing_workers(mock_run_context: RunContext) 
         return 10
 
     with (
-        patch("speedtest.engine.transfer._resolve_upload_url", side_effect=lambda url: url),
-        patch("speedtest.engine.transfer.upload_worker", side_effect=worker),
+        patch("speedtest.api.transfer._resolve_upload_url", side_effect=lambda url: url),
+        patch("speedtest.api.transfer.upload_worker", side_effect=worker),
     ):
-        sent, _ = run_upload_test("http://host.example/upload.php", mock_run_context)
+        sent, _ = run_upload_test("http://host.example/upload.php")
 
     assert sent == 49 * 10
 
 
-def test_run_upload_test_stops_collecting_on_shutdown(mock_run_context: RunContext) -> None:
+def test_run_upload_test_stops_collecting_on_shutdown() -> None:
     event = threading.Event()
-    mock_run_context.shutdown_event = event
 
     def worker(*_: object) -> int:
         event.set()
         return 10
 
     with (
-        patch("speedtest.engine.transfer._resolve_upload_url", side_effect=lambda url: url),
-        patch("speedtest.engine.transfer.upload_worker", side_effect=worker),
+        patch("speedtest.api.transfer._resolve_upload_url", side_effect=lambda url: url),
+        patch("speedtest.api.transfer.upload_worker", side_effect=worker),
     ):
-        sent, _ = run_upload_test("http://host.example/upload.php", mock_run_context)
+        sent, _ = run_upload_test("http://host.example/upload.php", shutdown_event=event)
 
     assert sent == 10
 
 
-def test_run_upload_test_stamps_start_time_before_dispatch(mock_run_context: RunContext) -> None:
+def test_run_upload_test_stamps_start_time_before_dispatch() -> None:
     seen: list[float] = []
 
     def worker(_client: object, _request: object, payload: MagicMock, *_: object) -> int:
@@ -230,10 +238,10 @@ def test_run_upload_test_stamps_start_time_before_dispatch(mock_run_context: Run
         return 0
 
     with (
-        patch("speedtest.engine.transfer._resolve_upload_url", side_effect=lambda url: url),
-        patch("speedtest.engine.transfer.upload_worker", side_effect=worker),
+        patch("speedtest.api.transfer._resolve_upload_url", side_effect=lambda url: url),
+        patch("speedtest.api.transfer.upload_worker", side_effect=worker),
     ):
-        run_upload_test("http://host.example/upload.php", mock_run_context)
+        run_upload_test("http://host.example/upload.php")
 
     assert len(seen) == 50
     assert all(start > 0.0 for start in seen)  # generator's dummy 0.0 was replaced

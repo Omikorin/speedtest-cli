@@ -1,13 +1,15 @@
 import json
+import threading
 from hashlib import md5
 from operator import attrgetter
 
 import httpx2
 
-from speedtest.engine import get_best_server, run_download_test, run_upload_test
-from speedtest.engine.network import build_user_agent
-from speedtest.exceptions import CLIError, NoMatchedServerError
-from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
+from .exceptions import BestServerFailureError, InvalidServerError, NoMatchedServerError, ShareError
+from .models import ApiConfig, Server, SpeedtestResult
+from .network import build_user_agent
+from .servers import get_best_server
+from .transfer import run_download_test, run_upload_test
 
 __all__ = ["DEFAULT_SERVER_LIMIT", "SpeedtestClient"]
 
@@ -35,36 +37,40 @@ class SpeedtestClient:
         """Pings a list of servers and returns the fastest one alongside its latency."""
 
         if not servers:
-            raise CLIError("No servers provided to test against.")
+            raise BestServerFailureError("No servers provided to test against.")
 
         best_server, latency = get_best_server(servers)
 
         if not best_server:
-            raise CLIError("Failed to identify a valid best server.")
+            raise BestServerFailureError("Failed to identify a valid best server.")
 
         return best_server, latency
 
-    def download(self, server: Server, ctx: RunContext) -> tuple[int, float]:
+    def download(
+        self, server: Server, threads: int = 4, shutdown_event: threading.Event | None = None
+    ) -> tuple[int, float]:
         """Executes the download test. Returns (bytes_received, download_speed)."""
 
         if not server.url:
-            raise CLIError("The target server is missing a valid URL.")
+            raise InvalidServerError("The target server is missing a valid URL.")
 
-        return run_download_test(best_server_url=server.url, ctx=ctx)
+        return run_download_test(best_server_url=server.url, threads=threads, shutdown_event=shutdown_event)
 
-    def upload(self, server: Server, ctx: RunContext) -> tuple[int, float]:
+    def upload(
+        self, server: Server, threads: int = 4, shutdown_event: threading.Event | None = None
+    ) -> tuple[int, float]:
         """Executes the upload test. Returns (bytes_sent, upload_speed)."""
 
         if not server.url:
-            raise CLIError("The target server is missing a valid URL.")
+            raise InvalidServerError("The target server is missing a valid URL.")
 
-        return run_upload_test(best_server_url=server.url, ctx=ctx)
+        return run_upload_test(best_server_url=server.url, threads=threads, shutdown_event=shutdown_event)
 
     def generate_share_link(self, results: SpeedtestResult, config: ApiConfig) -> str:
         """POST data to the speedtest.net API to obtain a share results link."""
 
         if results.ping_ms is None or not results.server:
-            raise CLIError("Cannot generate share link: missing test results.")
+            raise ShareError("Cannot generate share link: missing test results.")
 
         # The web client reports kbps and signs ping-upload-download with a fixed salt.
         download_kbps = round((results.download_bps or 0) / 1000.0)
@@ -112,13 +118,13 @@ class SpeedtestClient:
             resultid = response.json().get("resultid")
 
         except httpx2.HTTPStatusError as e:
-            raise CLIError(f"Could not submit results. HTTP {e.response.status_code}") from e
+            raise ShareError(f"Could not submit results. HTTP {e.response.status_code}") from e
         except httpx2.RequestError as e:
-            raise CLIError(f"Failed to connect to Share API: {e}") from e
+            raise ShareError(f"Failed to connect to Share API: {e}") from e
         except ValueError, AttributeError:
             resultid = None
 
         if not resultid:
-            raise CLIError(f"Could not parse result ID from API response: {body[:200]!r}")
+            raise ShareError(f"Could not parse result ID from API response: {body[:200]!r}")
 
         return f"https://www.speedtest.net/result/{resultid}.png"

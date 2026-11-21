@@ -5,8 +5,8 @@ Tests for the RunContext domain model.
 import argparse
 
 import pytest
+from speedtest.cli.context import RunContext
 from speedtest.exceptions import CLIError
-from speedtest.models import RunContext
 
 
 def _create_mock_args(**kwargs: bool | int | str | tuple[str, int] | tuple[float, float] | None) -> argparse.Namespace:
