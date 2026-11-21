@@ -15,8 +15,8 @@
     "helpers:pinGitHubActionDigestsToSemver",
 
     // schedule
-    "schedule:weekly",
-    ":maintainLockFilesWeekly"
+    "schedule:monthly",
+    ":maintainLockFilesMonthly"
   ],
   "rangeStrategy": "update-lockfile",
   "minimumReleaseAge": "7 days",
@@ -48,7 +48,7 @@
       "matchManagers": [
         "pre-commit" // waiting for prek support
       ],
-      "description": "Weekly update of prek dependencies"
+      "description": "Update of prek dependencies"
     }
   ]
 }
