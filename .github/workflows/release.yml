@@ -32,7 +32,7 @@ jobs:
           persist-credentials: false
 
       - name: Install
-        uses: ./.github/composite-actions/install
+        uses: $/.github/composite-actions/install
 
       - name: Build
         run: uv build
