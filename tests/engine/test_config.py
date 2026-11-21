@@ -148,14 +148,72 @@ def test_get_config_blocked_by_cdn_raises_config_error(mock_get: MagicMock) -> N
     ],
     ids=["nearby", "search", "location", "search-and-location"],
 )
-@patch("speedtest.engine.config.parse_config")
 @patch("speedtest.engine.config.fetch_raw_config")
 def test_get_config_sends_server_discovery_params(
-    mock_fetch: MagicMock, _mock_parse: MagicMock, kwargs: dict[str, Any], expected: dict[str, Any] | None
+    mock_fetch: MagicMock, raw_api_config: dict[str, Any], kwargs: dict[str, Any], expected: dict[str, Any] | None
 ) -> None:
+    mock_fetch.return_value = json.dumps(raw_api_config)
+
     get_config(**kwargs)
 
     mock_fetch.assert_called_once_with(params=expected)
+
+
+def _config_with_servers(raw_api_config: dict[str, Any], *servers: tuple[float, float, int]) -> str:
+    """Raw config whose servers sit at (lat, lon) and carry a bogus API distance."""
+
+    template = raw_api_config["servers"][0]
+    raw_api_config["servers"] = [
+        {**template, "id": str(i), "lat": str(lat), "lon": str(lon), "distance": api_distance}
+        for i, (lat, lon, api_distance) in enumerate(servers, start=1)
+    ]
+    return json.dumps(raw_api_config)
+
+
+@patch("speedtest.engine.config.fetch_raw_config")
+def test_get_config_measures_distance_from_the_client(mock_fetch: MagicMock, raw_api_config: dict[str, Any]) -> None:
+    """The API reports 658 km for a server that is really about 450 km away; we must not trust it."""
+
+    # Client is in Amsterdam; this server is in Paris.
+    mock_fetch.return_value = _config_with_servers(raw_api_config, (48.8566, 2.3522, 658))
+
+    config = get_config()
+
+    assert config.servers[0].distance == pytest.approx(430, abs=5)
+
+
+@patch("speedtest.engine.config.fetch_raw_config")
+def test_get_config_measures_distance_from_the_given_location(
+    mock_fetch: MagicMock, raw_api_config: dict[str, Any]
+) -> None:
+    # Server in Tokyo, client (per config) in Amsterdam, but the user asked for Tokyo.
+    mock_fetch.return_value = _config_with_servers(raw_api_config, (35.68, 139.69, 0))
+
+    near_tokyo = get_config(location=(35.6762, 139.6503))
+    from_ip = get_config()
+
+    assert near_tokyo.servers[0].distance < 10
+    assert from_ip.servers[0].distance > 9000
+
+
+@patch("speedtest.engine.config.fetch_raw_config")
+def test_get_config_distance_uses_the_ip_location_for_search(
+    mock_fetch: MagicMock, raw_api_config: dict[str, Any]
+) -> None:
+    mock_fetch.return_value = _config_with_servers(raw_api_config, (48.8566, 2.3522, 658))
+
+    config = get_config(search="Paris")
+
+    assert config.servers[0].distance == pytest.approx(430, abs=5)
+
+
+@patch("speedtest.engine.config.fetch_raw_config")
+def test_get_config_keeps_other_server_fields(mock_fetch: MagicMock, raw_api_config: dict[str, Any]) -> None:
+    mock_fetch.return_value = _config_with_servers(raw_api_config, (48.8566, 2.3522, 658))
+
+    server = get_config().servers[0]
+
+    assert (server.id, server.name, server.country) == (1, "Amsterdam", "Netherlands")
 
 
 @patch("speedtest.engine.config.httpx2.get")

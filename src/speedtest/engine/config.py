@@ -4,13 +4,14 @@ Retrieves and parses the core configuration JSON from speedtest.net.
 
 import json
 from collections.abc import Mapping
+from dataclasses import replace
 from json import JSONDecodeError
 
 import httpx2
 
 from speedtest.exceptions import CLIError
 from speedtest.models import ApiConfig
-from speedtest.utils import CONFIG_URL
+from speedtest.utils import CONFIG_URL, great_circle_km
 
 from .network import build_user_agent
 
@@ -68,6 +69,7 @@ def get_config(search: str | None = None, location: tuple[float, float] | None =
     Orchestrates fetching the raw data and building the strict dataclass models.
 
     `search` and `location` change which servers speedtest.net returns, not who the client is.
+    Server distances are recomputed in km: the API's own value is not reliable.
     """
 
     params: dict[str, str | float] = {}
@@ -77,4 +79,9 @@ def get_config(search: str | None = None, location: tuple[float, float] | None =
         params["lat"], params["lon"] = location
 
     raw_data = fetch_raw_config(params=params or None)
-    return parse_config(raw_data)
+    config = parse_config(raw_data)
+
+    origin = location if location is not None else (config.location.latitude, config.location.longitude)
+    config.servers = [replace(s, distance=round(great_circle_km(*origin, s.lat, s.lon))) for s in config.servers]
+
+    return config
