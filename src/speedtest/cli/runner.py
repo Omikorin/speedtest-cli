@@ -7,7 +7,7 @@ import signal
 import threading
 from types import FrameType
 
-from speedtest.client import SpeedtestClient
+from speedtest.client import DEFAULT_SERVER_LIMIT, SpeedtestClient
 from speedtest.engine import get_config
 from speedtest.exceptions import CLIError
 from speedtest.models import RunContext, SpeedtestResult
@@ -47,7 +47,7 @@ def shell() -> int:
 
     try:
         with console.status("[bold cyan]Retrieving speedtest.net configuration..."):
-            ctx.api_config = get_config()
+            ctx.api_config = get_config(search=ctx.search, location=ctx.location)
 
         logger.info(
             f"Client: {ctx.api_config.ip_address} (ISP: {ctx.api_config.isp_name}) "
@@ -55,7 +55,11 @@ def shell() -> int:
         )
 
         with console.status("[bold cyan]Fetching server list..."):
-            target_servers = client.get_target_servers(config=ctx.api_config, target_id=ctx.target_server_id)
+            target_servers = client.get_target_servers(
+                config=ctx.api_config,
+                target_id=ctx.target_server_id,
+                limit=None if ctx.list_servers_only else DEFAULT_SERVER_LIMIT,
+            )
 
         if ctx.list_servers_only:
             return print_server_list(target_servers)

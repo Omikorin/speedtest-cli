@@ -25,6 +25,8 @@ def test_parser_defaults() -> None:
         assert args.units == ("b", 1)
         assert args.json is False
         assert args.debug is False
+        assert args.search is None
+        assert args.location is None
 
 
 def test_parser_core_options() -> None:
@@ -81,3 +83,35 @@ def test_parser_output_options() -> None:
         assert args.units == ("B", 8)
         assert args.json is True
         assert args.debug is True
+
+
+def test_parser_search_option() -> None:
+    with patch.object(sys, "argv", ["speedtest-cli", "--search", "Germany"]):
+        args = parse_args()
+
+    assert args.search == "Germany"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("52.3716,4.8883", (52.3716, 4.8883)),
+        ("-33.87,151.21", (-33.87, 151.21)),
+        ("0,0", (0.0, 0.0)),
+        ("90,-180", (90.0, -180.0)),
+    ],
+)
+def test_parser_location_option(value: str, expected: tuple[float, float]) -> None:
+    # '=' form: a bare negative number after --location would look like a flag.
+    with patch.object(sys, "argv", ["speedtest-cli", f"--location={value}"]):
+        args = parse_args()
+
+    assert args.location == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("value", ["nonsense", "52.37", "1,2,3", "north,east", "91,0", "0,181", "-91,0"])
+def test_parser_location_rejects_invalid_coordinates(value: str, capsys: pytest.CaptureFixture[str]) -> None:
+    with patch.object(sys, "argv", ["speedtest-cli", f"--location={value}"]), pytest.raises(SystemExit):
+        parse_args()
+
+    assert "--location" in capsys.readouterr().err

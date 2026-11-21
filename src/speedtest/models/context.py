@@ -20,6 +20,10 @@ class RunContext:
     no_upload: bool
     threads: int
 
+    # Server discovery
+    search: str | None = None
+    location: tuple[float, float] | None = None
+
     # Output
     share: bool
     json_output: bool
@@ -56,6 +60,8 @@ class RunContext:
             debug_mode=args.debug,
             is_quiet=args.json,
             target_server_id=args.server,
+            search=args.search,
+            location=args.location,
             no_download=args.no_download,
             no_upload=args.no_upload,
             threads=threads,

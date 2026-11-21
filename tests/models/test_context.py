@@ -9,14 +9,16 @@ from speedtest.exceptions import CLIError
 from speedtest.models import RunContext
 
 
-def _create_mock_args(**kwargs: bool | int | tuple[str, int] | None) -> argparse.Namespace:
+def _create_mock_args(**kwargs: bool | int | str | tuple[str, int] | tuple[float, float] | None) -> argparse.Namespace:
     """Helper to generate a mock argparse.Namespace with default values."""
 
-    defaults: dict[str, bool | int | tuple[str, int] | None] = {
+    defaults: dict[str, bool | int | str | tuple[str, int] | tuple[float, float] | None] = {
         "list": False,
         "debug": False,
         "json": False,
         "server": None,
+        "search": None,
+        "location": None,
         "no_download": False,
         "no_upload": False,
         "single": False,
@@ -105,3 +107,17 @@ def test_run_context_from_args_json_quiet_mode() -> None:
 
     assert ctx.json_output is True
     assert ctx.is_quiet is True
+
+
+def test_run_context_from_args_server_discovery() -> None:
+    ctx = RunContext.from_args(_create_mock_args(search="Germany", location=(35.68, 139.69)))
+
+    assert ctx.search == "Germany"
+    assert ctx.location == (35.68, 139.69)
+
+
+def test_run_context_from_args_discovery_defaults_to_nearby_servers() -> None:
+    ctx = RunContext.from_args(_create_mock_args())
+
+    assert ctx.search is None
+    assert ctx.location is None

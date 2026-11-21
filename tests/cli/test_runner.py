@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from speedtest.cli.runner import _register_shutdown_handler, shell
+from speedtest.client import DEFAULT_SERVER_LIMIT
 from speedtest.engine.config import ConfigFetchError
 from speedtest.exceptions import CLIError
 from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
@@ -266,3 +267,27 @@ def test_shell_passes_target_server_id_to_client(shell_env: SimpleNamespace, moc
     shell()
 
     assert shell_env.client.get_target_servers.call_args.kwargs["target_id"] == 52365
+
+
+def test_shell_passes_search_and_location_to_config(shell_env: SimpleNamespace, mock_run_context: RunContext) -> None:
+    mock_run_context.search = "Germany"
+    mock_run_context.location = (35.68, 139.69)
+
+    shell()
+
+    shell_env.get_config.assert_called_once_with(search="Germany", location=(35.68, 139.69))
+
+
+def test_shell_limits_servers_when_testing(shell_env: SimpleNamespace) -> None:
+    shell()
+
+    assert shell_env.client.get_target_servers.call_args.kwargs["limit"] == DEFAULT_SERVER_LIMIT
+
+
+def test_shell_lists_every_returned_server(shell_env: SimpleNamespace, mock_run_context: RunContext) -> None:
+    mock_run_context.list_servers_only = True
+
+    with patch("speedtest.cli.runner.print_server_list", return_value=ExitStatus.SUCCESS.value):
+        shell()
+
+    assert shell_env.client.get_target_servers.call_args.kwargs["limit"] is None

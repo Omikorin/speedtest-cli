@@ -61,6 +61,16 @@ def test_get_target_servers_unknown_id_raises(
         client.get_target_servers(mock_api_config, target_id=999)
 
 
+def test_get_target_servers_without_limit_returns_every_server(
+    client: SpeedtestClient, mock_api_config: ApiConfig, mock_server: Server
+) -> None:
+    mock_api_config.servers = [replace(mock_server, id=i, distance=i) for i in range(8)]
+
+    result = client.get_target_servers(mock_api_config, limit=None)
+
+    assert [s.id for s in result] == list(range(8))
+
+
 # --- select_best_server ---
 
 

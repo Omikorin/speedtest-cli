@@ -47,6 +47,7 @@ def test_fetch_raw_config_success(mock_build_ua: MagicMock, mock_get: MagicMock)
             "User-Agent": "MockUserAgent/1.0",
             "Accept": "application/json",
         },
+        params=None,
         timeout=10.0,
     )
     mock_response.raise_for_status.assert_called_once()
@@ -132,3 +133,35 @@ def test_get_config_blocked_by_cdn_raises_config_error(mock_get: MagicMock) -> N
 
     with pytest.raises(ConfigFetchError, match="HTTP 403"):
         get_config()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        ({}, None),
+        ({"search": "Germany"}, {"search": "Germany"}),
+        ({"location": (35.68, 139.69)}, {"lat": 35.68, "lon": 139.69}),
+        (
+            {"search": "Paris", "location": (35.68, 139.69)},
+            {"search": "Paris", "lat": 35.68, "lon": 139.69},
+        ),
+    ],
+    ids=["nearby", "search", "location", "search-and-location"],
+)
+@patch("speedtest.engine.config.parse_config")
+@patch("speedtest.engine.config.fetch_raw_config")
+def test_get_config_sends_server_discovery_params(
+    mock_fetch: MagicMock, _mock_parse: MagicMock, kwargs: dict[str, Any], expected: dict[str, Any] | None
+) -> None:
+    get_config(**kwargs)
+
+    mock_fetch.assert_called_once_with(params=expected)
+
+
+@patch("speedtest.engine.config.httpx2.get")
+def test_fetch_raw_config_forwards_query_params(mock_get: MagicMock) -> None:
+    mock_get.return_value = MagicMock(text="{}")
+
+    fetch_raw_config("http://example.com", params={"search": "Paris"})
+
+    assert mock_get.call_args.kwargs["params"] == {"search": "Paris"}

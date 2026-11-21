@@ -9,6 +9,21 @@ from speedtest import __version__
 __all__ = ["parse_args"]
 
 
+def _coordinates(value: str) -> tuple[float, float]:
+    """Parse `LAT,LON` into a validated coordinate pair."""
+
+    try:
+        latitude_text, longitude_text = value.split(",")
+        latitude, longitude = float(latitude_text), float(longitude_text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid coordinates {value!r}, expected LAT,LON like 52.37,4.89") from None
+
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        raise argparse.ArgumentTypeError(f"coordinates out of range: {value!r}")
+
+    return latitude, longitude
+
+
 def parse_args() -> argparse.Namespace:
     """Function to handle building and parsing of command line arguments."""
 
@@ -36,6 +51,16 @@ def parse_args() -> argparse.Namespace:
         "--server",
         type=int,
         help="Specify a server id to test against.",
+    )
+    core_group.add_argument(
+        "--search",
+        help="Find servers matching a country or city name, anywhere in the world.",
+    )
+    core_group.add_argument(
+        "--location",
+        type=_coordinates,
+        metavar="LAT,LON",
+        help="Find servers near these coordinates instead of near your IP address.",
     )
 
     transfer_group = parser.add_argument_group("Transfer Modifiers")

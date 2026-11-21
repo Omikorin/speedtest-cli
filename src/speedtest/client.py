@@ -9,13 +9,17 @@ from speedtest.engine.network import build_user_agent
 from speedtest.exceptions import CLIError, NoMatchedServerError
 from speedtest.models import ApiConfig, RunContext, Server, SpeedtestResult
 
-__all__ = ["SpeedtestClient"]
+__all__ = ["DEFAULT_SERVER_LIMIT", "SpeedtestClient"]
+
+DEFAULT_SERVER_LIMIT = 5
 
 
 class SpeedtestClient:
     """Orchestrates high-level speedtest actions."""
 
-    def get_target_servers(self, config: ApiConfig, target_id: int | None = None, limit: int = 5) -> list[Server]:
+    def get_target_servers(
+        self, config: ApiConfig, target_id: int | None = None, limit: int | None = DEFAULT_SERVER_LIMIT
+    ) -> list[Server]:
         """Sorts available servers by distance and filters by ID if requested."""
 
         servers = sorted(config.servers, key=attrgetter("distance"))

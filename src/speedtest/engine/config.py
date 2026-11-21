@@ -3,6 +3,7 @@ Retrieves and parses the core configuration JSON from speedtest.net.
 """
 
 import json
+from collections.abc import Mapping
 from json import JSONDecodeError
 
 import httpx2
@@ -20,7 +21,7 @@ class ConfigFetchError(CLIError):
     """Raised when the configuration cannot be retrieved or parsed."""
 
 
-def fetch_raw_config(url: str = CONFIG_URL) -> str:
+def fetch_raw_config(url: str = CONFIG_URL, params: Mapping[str, str | float] | None = None) -> str:
     """
     Fetches the raw JSON string configuration from the Speedtest API.
     This function is strictly I/O bound.
@@ -32,7 +33,7 @@ def fetch_raw_config(url: str = CONFIG_URL) -> str:
     }
 
     try:
-        response = httpx2.get(url, headers=headers, timeout=10.0)
+        response = httpx2.get(url, headers=headers, params=params, timeout=10.0)
         response.raise_for_status()
 
         return response.text
@@ -62,10 +63,18 @@ def parse_config(raw_data: str) -> ApiConfig:
         raise ConfigFetchError(f"Failed to map config to domain model: {e}") from e
 
 
-def get_config() -> ApiConfig:
+def get_config(search: str | None = None, location: tuple[float, float] | None = None) -> ApiConfig:
     """
     Orchestrates fetching the raw data and building the strict dataclass models.
+
+    `search` and `location` change which servers speedtest.net returns, not who the client is.
     """
 
-    raw_data = fetch_raw_config()
+    params: dict[str, str | float] = {}
+    if search:
+        params["search"] = search
+    if location is not None:
+        params["lat"], params["lon"] = location
+
+    raw_data = fetch_raw_config(params=params or None)
     return parse_config(raw_data)

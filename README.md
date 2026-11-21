@@ -47,7 +47,8 @@ speedtest-cli --help
 ```
 
 ```text
-usage: speedtest-cli [-h] [-l] [-s SERVER] [--no-download] [--no-upload]
+usage: speedtest-cli [-h] [-l] [-s SERVER] [--search SEARCH]
+                     [--location LAT,LON] [--no-download] [--no-upload]
                      [-t THREADS | --single] [--share] [--bytes] [--json]
                      [--debug] [--version]
 
@@ -60,6 +61,8 @@ Core Options:
   -l, --list            Show available speedtest.net servers sorted by distance. (default: False)
   -s SERVER, --server SERVER
                         Specify a server id to test against. (default: None)
+  --search SEARCH       Find servers matching a country or city name, anywhere in the world. (default: None)
+  --location LAT,LON    Find servers near these coordinates instead of near your IP address. (default: None)
 
 Transfer Modifiers:
   --no-download         Do not perform the download test. (default: False)
@@ -77,6 +80,22 @@ Miscellaneous Options:
   --debug               Show verbose debugging output. (default: False)
   --version             show program's version number and exit
 ```
+
+#### Testing against other regions
+
+By default only the servers nearest to your IP address are offered. To use servers elsewhere:
+
+```bash
+speedtest-cli --list --search Germany
+speedtest-cli --search Tokyo
+
+# Servers nearest to a point; use '=' so negative numbers aren't read as flags
+speedtest-cli --list --location=-33.87,151.21
+```
+
+The service has no continent filter, so a search such as `Europe` returns unrelated results. Search by country, or use `--location` with the coordinates of the area you want. The result is a normal server list, so pick one with `--server ID`.
+
+If you run `--search` without `--list` then a test will start for the nearest server from the chosen region.
 
 ## Development
 
