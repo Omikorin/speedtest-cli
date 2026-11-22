@@ -34,7 +34,7 @@ jobs:
           # lfs: true
 
       - name: Mirror
-        uses: Omikorin/git-mirror@c8ec6aee96e772eb1949314c011172daf78caec8 # v1.3.0
+        uses: Omikorin/git-mirror@43ce903c06840882f31a6e6d5941d658cac72099 # v1.4.0
         with:
           target_repo: 'git@${{ matrix.target_host }}:${{ github.repository }}.git'
           ssh_private_key: ${{ secrets.MIRROR_SSH_KEY }}
